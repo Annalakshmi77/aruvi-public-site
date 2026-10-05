@@ -8,7 +8,7 @@ export const ContactSection: React.FC = () => {
         {/* Left Col: Headings */}
         <div className="lg:col-span-7">
           <span className="text-xs font-mono font-bold tracking-widest text-[#0d4d3d] uppercase mb-2 block">
-            05 — CONTACT
+            04 — CONTACT
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0d382c] tracking-tight font-display mb-4">
             Send your artwork. Get a clear quote.

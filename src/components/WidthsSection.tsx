@@ -24,7 +24,7 @@ export const WidthsSection: React.FC = () => {
         {/* Section Header */}
         <div className="max-w-3xl mb-14">
           <span className="text-xs font-mono font-bold tracking-widest text-[#e58a00] uppercase mb-2 block">
-            04 — WIDTHS
+            03 — WIDTHS
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#f5f0e6] tracking-tight font-display mb-4">
             The right width for every box

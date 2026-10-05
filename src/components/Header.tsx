@@ -6,8 +6,7 @@ export const Header: React.FC = () => {
 
   const navLinks = [
     { name: "Tape types", href: "#types" },
-    { name: "Gallery", href: "#gallery" },
-    { name: "Prices", href: "#pricing" },
+    { name: "Products", href: "#gallery" },
     { name: "Widths", href: "#widths" },
     { name: "Contact", href: "#contact" },
   ];

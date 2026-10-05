@@ -4,7 +4,6 @@ import { TapeHeroImage } from "@/components/TapeHeroImage";
 import { TapeMarquee } from "@/components/TapeMarquee";
 import { TapeTypesSection } from "@/components/TapeTypesSection";
 import { GallerySection } from "@/components/GallerySection";
-import { PricingSection } from "@/components/PricingSection";
 import { WidthsSection } from "@/components/WidthsSection";
 import { ContactSection } from "@/components/ContactSection";
 import { Footer } from "@/components/Footer";
@@ -39,7 +38,7 @@ export function App() {
                 Branded and plain packing tape, made at our factory in Sivakasi. Widths from 1 to 6 inches, 100-metre rolls, ready in 15 days — starting from a single box.
               </p>
 
-              {/* Call to Actions without WhatsApp buttons */}
+              {/* Call to Actions */}
               <div className="flex flex-wrap items-center gap-4 mb-12">
                 <a
                   href="#types"
@@ -50,10 +49,10 @@ export function App() {
                 </a>
 
                 <a
-                  href="#prices"
+                  href="#gallery"
                   className="inline-flex items-center gap-2 border border-[#0d382c]/30 hover:border-[#0d4d3d] bg-transparent text-[#0d382c] px-6 py-3.5 rounded-lg font-bold hover:bg-[#0d4d3d]/5 transition-colors"
                 >
-                  <span>See pricing</span>
+                  <span>View Products</span>
                   <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
@@ -111,16 +110,13 @@ export function App() {
         {/* 01 - TAPE TYPES SECTION */}
         <TapeTypesSection />
 
-        {/* 02 - GALLERY SECTION */}
+        {/* 02 - GALLERY / PRODUCTS SECTION */}
         <GallerySection />
 
-        {/* 03 - PRICING SECTION */}
-        <PricingSection />
-
-        {/* 04 - WIDTHS SECTION */}
+        {/* 03 - WIDTHS SECTION */}
         <WidthsSection />
 
-        {/* 05 - CONTACT SECTION */}
+        {/* 04 - CONTACT SECTION */}
         <ContactSection />
       </main>
 

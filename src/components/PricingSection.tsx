@@ -27,7 +27,7 @@ const ColorDot: React.FC<{ name: string }> = ({ name }) => {
       <span
         className={`w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs inline-block ${
           item.isTransparent ? "swatch-transparent" : ""
-        }`}
+          }`}
         style={{ backgroundColor: item.isTransparent ? undefined : item.color }}
       />
       <span>{item.name}</span>

@@ -20,8 +20,7 @@ export const Footer: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-6 text-[#f5f0e6]/70">
           <a href="#types" className="hover:text-white transition-colors">Tape Types</a>
-          <a href="#gallery" className="hover:text-white transition-colors">Gallery</a>
-          <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+          <a href="#gallery" className="hover:text-white transition-colors">Products</a>
           <a href="#widths" className="hover:text-white transition-colors">Widths</a>
           <a href="#contact" className="hover:text-white transition-colors">Contact</a>
         </div>
