@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { catalogService, PublicProduct, PublicCategory, PublicVariant } from "@/services/catalog.service";
+import { catalogService, PublicProduct, PublicCategory, PublicVariant, getFullImageUrl } from "@/services/catalog.service";
 import {
   Loader2,
   X,
@@ -18,7 +18,8 @@ import {
   Eye,
   FileSpreadsheet,
   Layers,
-  Sparkles
+  Sparkles,
+  Tag
 } from "lucide-react";
 
 interface GalleryItem {
@@ -29,6 +30,8 @@ interface GalleryItem {
   image: string | null;
   subtitle: string;
   price?: number | null;
+  priceText?: string | null;
+  moq?: number | null;
   sku?: string;
   stock?: number | null;
   stockStatus?: string;
@@ -90,6 +93,7 @@ const ProductCard: React.FC<{
 }> = ({ item, onOpenExplore }) => {
   // 1st / Default Variant
   const defaultVariant = item.variants[0];
+  const cardImage = item.image || defaultVariant?.image || item.variants.find((v) => v.image)?.image || null;
 
   const defaultSize = defaultVariant?.attributes?.find((a) =>
     a.name.toLowerCase().includes("size") || a.name.toLowerCase().includes("width")
@@ -138,9 +142,9 @@ const ProductCard: React.FC<{
       {/* 1. VISUAL PRODUCT HERO CONTAINER (E-COMMERCE SHOWCASE)    */}
       {/* ========================================================= */}
       <div className="relative aspect-[16/11] w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f1e6] to-[#efe6d4] flex items-center justify-center overflow-hidden border-b border-[#0d382c]/10 p-6">
-        {item.image ? (
+        {cardImage ? (
           <img
-            src={item.image}
+            src={cardImage}
             alt={item.title}
             loading="lazy"
             className="w-full h-full object-contain object-center transition-transform duration-500 group-hover:scale-108"
@@ -179,10 +183,23 @@ const ProductCard: React.FC<{
           </span>
         </div>
 
-        <div className="absolute top-3.5 right-3.5">
-          <span className="px-2.5 py-1 rounded-lg bg-[#0d382c] text-white font-mono text-[10px] font-bold shadow-xs">
-            {defaultSku}
-          </span>
+        {/* Top-Right Price or SKU Badge */}
+        <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
+          {item.priceText ? (
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-mono text-[11px] font-extrabold shadow-sm border border-emerald-600 flex items-center gap-1">
+              <Tag className="w-3 h-3 text-emerald-200" />
+              <span>{item.priceText.replace(' incl. GST', '')}</span>
+            </span>
+          ) : item.price && item.price > 0 ? (
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-mono text-[11px] font-extrabold shadow-sm border border-emerald-600 flex items-center gap-1">
+              <Tag className="w-3 h-3 text-emerald-200" />
+              <span>from ₹{item.price.toLocaleString()}</span>
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-lg bg-[#0d382c] text-white font-mono text-[10px] font-bold shadow-xs">
+              {defaultSku}
+            </span>
+          )}
         </div>
 
         {/* Bottom Spec Tag on Image with Live DB Stock Status */}
@@ -249,9 +266,10 @@ const ProductCard: React.FC<{
           {/* Technical Spec Matrix Badges */}
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-mono">
             <div className="p-2.5 bg-white rounded-xl border border-[#0d382c]/10 shadow-2xs">
-              <span className="text-[10px] text-[#0d382c]/60 block uppercase">Standard Length</span>
-              <strong className="text-xs font-bold text-[#0d382c] block mt-0.5">
-                100 Metres
+              <span className="text-[10px] text-[#0d382c]/60 block uppercase">Min Order (MOQ)</span>
+              <strong className="text-xs font-bold text-[#0d382c] flex items-center gap-1 mt-0.5">
+                <Package className="w-3 h-3 text-[#0d4d3d]" />
+                {defaultVariant?.moq ?? (item.variants?.length > 0 ? 1 : (item.moq ?? 1))} Box{Number(defaultVariant?.moq ?? (item.variants?.length > 0 ? 1 : (item.moq ?? 1))) > 1 ? "es" : ""}
               </strong>
             </div>
             <div className="p-2.5 bg-white rounded-xl border border-[#0d382c]/10 shadow-2xs">
@@ -263,15 +281,32 @@ const ProductCard: React.FC<{
             </div>
           </div>
 
-          {/* Configurations Overview Pill */}
+          {/* Pricing & Configurations Overview Pill */}
           <div className="mt-3 p-2.5 bg-white rounded-xl border border-[#0d382c]/10 shadow-2xs flex items-center justify-between text-xs font-mono">
-            <span className="text-[#0d4d3d] font-bold flex items-center gap-1.5 text-[11px]">
-              <Layers className="w-3.5 h-3.5" />
-              {item.variants.length} Configured Variants
-            </span>
-            <span className="text-[#0d382c]/75 text-[11px]">
-              {distinctSizesList.length} Widths • {distinctColorsList.length} Colours
-            </span>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-wider text-[#0d382c]/60 font-bold">Wholesale Price</span>
+              {defaultVariant?.price && defaultVariant.price > 0 ? (
+                <span className="text-emerald-800 font-extrabold text-xs">
+                  ₹{defaultVariant.price.toLocaleString()} <span className="text-[10px] text-[#0d382c]/60 font-normal">/ Box</span>
+                </span>
+              ) : item.priceText ? (
+                <span className="text-emerald-800 font-extrabold text-xs">
+                  {item.priceText}
+                </span>
+              ) : item.price && item.price > 0 ? (
+                <span className="text-emerald-800 font-extrabold text-xs">
+                  from ₹{item.price.toLocaleString()} <span className="text-[10px] text-[#0d382c]/60 font-normal">/ Box</span>
+                </span>
+              ) : (
+                <span className="text-[#0d382c]/75 font-semibold text-[11px]">Quote on Request</span>
+              )}
+            </div>
+            <div className="text-right">
+              <span className="text-[9px] uppercase tracking-wider text-[#0d382c]/60 font-bold block">Options</span>
+              <span className="text-[#0d382c] font-bold text-xs">
+                {item.variantCount || item.variants.length} Variants
+              </span>
+            </div>
           </div>
         </div>
 
@@ -300,10 +335,36 @@ const ProductCard: React.FC<{
 const ProductDetailModal: React.FC<{
   product: GalleryItem;
   onClose: () => void;
-}> = ({ product, onClose }) => {
+}> = ({ product: initialProduct, onClose }) => {
+  const [product, setProduct] = useState<GalleryItem>(initialProduct);
   const [activeTab, setActiveTab] = useState<"configurator" | "table">("configurator");
   const [tableSearch, setTableSearch] = useState<string>("");
   const [boxQuantity, setBoxQuantity] = useState<number>(1);
+
+  // Fetch complete details (all variants, dyes, attributes) from v2 API
+  useEffect(() => {
+    let active = true;
+    if (initialProduct.id) {
+      catalogService
+        .getProductFull(initialProduct.id)
+        .then((full) => {
+          if (active && full && full.variants && full.variants.length > 0) {
+            setProduct((prev) => ({
+              ...prev,
+              subtitle: full.description || prev.subtitle,
+              price: full.price ?? prev.price,
+              moq: full.moq ?? prev.moq,
+              variantCount: full.variants.length,
+              variants: full.variants,
+            }));
+          }
+        })
+        .catch(console.error);
+    }
+    return () => {
+      active = false;
+    };
+  }, [initialProduct.id]);
 
   // Extract distinct sizes & colors
   const distinctSizes = useMemo(() => {
@@ -335,6 +396,18 @@ const ProductDetailModal: React.FC<{
   const [selectedSize, setSelectedSize] = useState<string>(distinctSizes[0] || "");
   const [selectedColor, setSelectedColor] = useState<string>(distinctColors[0] || "");
 
+  useEffect(() => {
+    if (!selectedSize && distinctSizes.length > 0) {
+      setSelectedSize(distinctSizes[0]);
+    }
+  }, [distinctSizes, selectedSize]);
+
+  useEffect(() => {
+    if (!selectedColor && distinctColors.length > 0) {
+      setSelectedColor(distinctColors[0]);
+    }
+  }, [distinctColors, selectedColor]);
+
   // Active matched variant based on selected size & color
   const activeVariant = useMemo(() => {
     return product.variants.find((v) => {
@@ -350,6 +423,15 @@ const ProductDetailModal: React.FC<{
       return sizeMatch && colorMatch;
     }) || product.variants[0];
   }, [product.variants, selectedSize, selectedColor]);
+
+  // Compute active variant MOQ & price (strictly from active variant when variants exist)
+  const activeMoq = Number(activeVariant?.moq ?? (product.variants?.length > 0 ? 1 : (product.moq ?? 1))) || 1;
+  const activePrice = activeVariant?.price ?? product.price ?? null;
+
+  // Auto-enforce MOQ floor whenever variant changes
+  useEffect(() => {
+    setBoxQuantity((prev) => Math.max(activeMoq, prev));
+  }, [activeMoq]);
 
   const rollsPerBox = parseRollsPerBox(selectedSize || activeVariant?.value);
   const totalRolls = rollsPerBox * boxQuantity;
@@ -433,35 +515,49 @@ const ProductDetailModal: React.FC<{
               {/* Left Column: Visual Tape Preview & Key Spec Highlights */}
               <div className="lg:col-span-5 space-y-4">
                 {/* Dynamic visual tape roll representation */}
-                <div className="rounded-2xl bg-white border border-[#0d382c]/15 p-6 shadow-xs flex flex-col items-center justify-center relative overflow-hidden">
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#0d4d3d] mb-4 font-bold">
-                    Interactive Spec Preview
+                <div className="rounded-2xl bg-white border border-[#0d382c]/15 p-5 shadow-xs flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#0d4d3d] mb-3 font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{activeVariant?.image || product.image ? "Verified Product Photo" : "Interactive Spec Preview"}</span>
                   </div>
 
-                  {/* Visual Roll Simulation */}
-                  <div className="relative w-44 h-44 flex items-center justify-center my-2">
-                    {/* Outer Roll Ring */}
-                    <div
-                      className="w-40 h-40 rounded-full border-8 transition-all duration-300 shadow-lg flex items-center justify-center"
-                      style={{
-                        backgroundColor: activeSwatch.bg,
-                        borderColor: activeSwatch.border || "#0d382c",
-                      }}
-                    >
-                      {/* Inner Core */}
-                      <div className="w-20 h-20 rounded-full bg-[#f4ebd0] border-4 border-[#c59a58] flex flex-col items-center justify-center shadow-inner text-center p-1">
-                        <span className="text-[9px] font-mono font-bold text-[#63481b] uppercase">PEACOCK</span>
-                        <span className="text-[7px] font-mono text-[#63481b]">76mm Core</span>
+                  {(activeVariant?.image || product.image || product.variants.find((v) => v.image)?.image) ? (
+                    <div className="relative w-full aspect-square max-w-[240px] flex items-center justify-center my-1 rounded-xl overflow-hidden bg-gradient-to-b from-[#fbf8f2] to-[#f4ebd0] p-2 border border-[#0d382c]/10 shadow-xs">
+                      <img
+                        src={(activeVariant?.image || product.image || product.variants.find((v) => v.image)?.image)!}
+                        alt={`${product.title} - ${selectedColor}`}
+                        className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                      />
+                      <div className="absolute bottom-2 left-2 right-2 bg-[#0d382c]/85 backdrop-blur-xs text-white text-[10px] font-mono font-bold px-2 py-1 rounded-md text-center">
+                        {activeVariant?.label || `${selectedColor} Tape`}
                       </div>
                     </div>
+                  ) : (
+                    /* Visual Roll Simulation */
+                    <div className="relative w-44 h-44 flex items-center justify-center my-2">
+                      {/* Outer Roll Ring */}
+                      <div
+                        className="w-40 h-40 rounded-full border-8 transition-all duration-300 shadow-lg flex items-center justify-center"
+                        style={{
+                          backgroundColor: activeSwatch.bg,
+                          borderColor: activeSwatch.border || "#0d382c",
+                        }}
+                      >
+                        {/* Inner Core */}
+                        <div className="w-20 h-20 rounded-full bg-[#f4ebd0] border-4 border-[#c59a58] flex flex-col items-center justify-center shadow-inner text-center p-1">
+                          <span className="text-[9px] font-mono font-bold text-[#63481b] uppercase">PEACOCK</span>
+                          <span className="text-[7px] font-mono text-[#63481b]">76mm Core</span>
+                        </div>
+                      </div>
 
-                    {/* Width Badge Indicator */}
-                    <div className="absolute -bottom-2 bg-[#0d382c] text-white text-[10px] font-mono font-bold px-3 py-1 rounded-full shadow-md">
-                      {formatShortSize(selectedSize)}
+                      {/* Width Badge Indicator */}
+                      <div className="absolute -bottom-2 bg-[#0d382c] text-white text-[10px] font-mono font-bold px-3 py-1 rounded-full shadow-md">
+                        {formatShortSize(selectedSize)}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="mt-4 text-center">
+                  <div className="mt-3 text-center">
                     <span className="text-xs font-bold text-[#0d382c] block capitalize">
                       {selectedColor} Tape • {formatShortSize(selectedSize)}
                     </span>
@@ -484,7 +580,7 @@ const ProductDetailModal: React.FC<{
                     <span className="text-[10px] text-[#0d382c]/60 block">MINIMUM ORDER</span>
                     <strong className="text-sm font-bold text-[#0d382c] flex items-center gap-1 mt-0.5">
                       <Package className="w-3.5 h-3.5" />
-                      1 Box (MOQ)
+                      {activeMoq} Box{activeMoq > 1 ? "es" : ""} (MOQ)
                     </strong>
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-[#0d382c]/10 shadow-2xs">
@@ -608,12 +704,14 @@ const ProductDetailModal: React.FC<{
                       </span>
                     </div>
 
-                    {/* Stepper */}
+                    {/* Stepper with MOQ enforcement */}
                     <div className="flex items-center gap-2 bg-[#faf6f0] p-1 rounded-xl border border-[#0d382c]/15">
                       <button
                         type="button"
-                        onClick={() => setBoxQuantity(Math.max(1, boxQuantity - 1))}
-                        className="w-7 h-7 rounded-lg bg-white border border-[#0d382c]/15 font-bold text-sm text-[#0d382c] hover:bg-[#0d382c] hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                        onClick={() => setBoxQuantity(Math.max(activeMoq, boxQuantity - 1))}
+                        disabled={boxQuantity <= activeMoq}
+                        className="w-7 h-7 rounded-lg bg-white border border-[#0d382c]/15 font-bold text-sm text-[#0d382c] hover:bg-[#0d382c] hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#0d382c] disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center"
+                        title={boxQuantity <= activeMoq ? `Minimum order is ${activeMoq} box(es)` : "Decrease box count"}
                       >
                         -
                       </button>
@@ -624,6 +722,7 @@ const ProductDetailModal: React.FC<{
                         type="button"
                         onClick={() => setBoxQuantity(boxQuantity + 1)}
                         className="w-7 h-7 rounded-lg bg-white border border-[#0d382c]/15 font-bold text-sm text-[#0d382c] hover:bg-[#0d382c] hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                        title="Increase box count"
                       >
                         +
                       </button>
@@ -637,6 +736,35 @@ const ProductDetailModal: React.FC<{
                       {totalRolls.toLocaleString()} Total Rolls ({boxQuantity} Box{boxQuantity > 1 ? "es" : ""})
                     </span>
                   </div>
+
+                  {/* MOQ & Dynamic Price Calculation Box */}
+                  {activePrice && activePrice > 0 ? (
+                    <div className="p-3.5 bg-emerald-50/90 border border-emerald-300/60 rounded-xl flex items-center justify-between font-mono text-xs text-emerald-950 shadow-2xs">
+                      <div>
+                        <span className="text-[10px] text-emerald-700 uppercase block font-bold">
+                          Unit Price (MOQ: {activeMoq} Box{activeMoq > 1 ? "es" : ""})
+                        </span>
+                        <span className="text-sm font-extrabold text-emerald-900">
+                          ₹{activePrice.toLocaleString()} / Box
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-emerald-700 uppercase block font-bold">
+                          Est. Total ({boxQuantity} Box{boxQuantity > 1 ? "es" : ""})
+                        </span>
+                        <span className="text-base font-black text-emerald-700">
+                          ₹{(activePrice * boxQuantity).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-[#0d382c]/5 border border-[#0d382c]/15 rounded-xl flex items-center justify-between font-mono text-xs text-[#0d382c]">
+                      <span className="font-bold text-[#0d4d3d]">Price on Request / Wholesale Quote</span>
+                      <span className="text-[10px] bg-white px-2.5 py-1 rounded-md border border-[#0d382c]/10 font-bold">
+                        MOQ: {activeMoq} Box{activeMoq > 1 ? "es" : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Primary Actions */}
@@ -688,6 +816,7 @@ const ProductDetailModal: React.FC<{
                         <th className="py-3 px-4 font-bold">Width / Size</th>
                         <th className="py-3 px-4 font-bold">Colour</th>
                         <th className="py-3 px-4 font-bold">Packaging</th>
+                        <th className="py-3 px-4 font-bold text-right">Price / Box</th>
                         <th className="py-3 px-4 font-bold text-right">Status</th>
                       </tr>
                     </thead>
@@ -731,6 +860,15 @@ const ProductDetailModal: React.FC<{
                             </td>
                             <td className="py-3 px-4 text-[#0d4d3d] font-semibold">
                               {pbox} Rolls / Box
+                            </td>
+                            <td className="py-3 px-4 text-right font-bold text-emerald-800">
+                              {v.priceText ? (
+                                <span>{v.priceText}</span>
+                              ) : v.price && v.price > 0 ? (
+                                <span>₹{v.price.toLocaleString()}</span>
+                              ) : (
+                                <span className="text-[#0d382c]/50 font-normal">On Request</span>
+                              )}
                             </td>
                             <td className="py-3 px-4 text-right">
                               <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px]">
@@ -806,7 +944,7 @@ export const GallerySection: React.FC = () => {
         // Products list strictly from DB
         if (prodsRes && prodsRes.products && prodsRes.products.length > 0) {
           const mapped: GalleryItem[] = prodsRes.products.map((p: PublicProduct, idx: number) => {
-            const variantCount = p.variants?.length || 0;
+            const variantCount = p.variantCount || p.variants?.length || 0;
             const responseImage =
               (p.image && p.image.trim() !== "" ? p.image : null) ||
               (p.gallery?.[0]?.src && p.gallery[0].src.trim() !== "" ? p.gallery[0].src : null) ||
@@ -826,6 +964,8 @@ export const GallerySection: React.FC = () => {
               image: responseImage,
               subtitle,
               price: p.price,
+              priceText: p.priceText,
+              moq: p.moq,
               sku: p.sku,
               stock: p.stock,
               stockStatus: p.stockStatus,
@@ -836,6 +976,32 @@ export const GallerySection: React.FC = () => {
 
           setItems(mapped);
           setIsLive(true);
+
+          // Asynchronously enrich products that have prices so variant images (like Milky White) load directly!
+          const pricedProducts = prodsRes.products.filter((p) => p.price !== null || p.priceText !== null);
+          if (pricedProducts.length > 0) {
+            catalogService
+              .getProductDetails(pricedProducts.map((p) => p.id))
+              .then((detailsRes) => {
+                if (!isMounted || !detailsRes.products || detailsRes.products.length === 0) return;
+                setItems((prevItems) =>
+                  prevItems.map((item) => {
+                    const detail = detailsRes.products.find((d) => d.id === item.id);
+                    if (!detail) return item;
+                    const variantWithImg = detail.items?.find((it) => it.image && it.image.trim() !== "");
+                    const foundImg = detail.images?.[0] || variantWithImg?.image || null;
+                    const fullImgUrl = getFullImageUrl(foundImg);
+
+                    return {
+                      ...item,
+                      image: fullImgUrl || item.image,
+                      variantCount: detail.items?.length || item.variantCount,
+                    };
+                  })
+                );
+              })
+              .catch(console.error);
+          }
         } else {
           setItems([]);
         }

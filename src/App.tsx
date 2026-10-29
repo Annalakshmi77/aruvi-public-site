@@ -11,7 +11,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 export function App() {
   return (
-    <div className="min-h-screen bg-[#f5f0e6] text-[#0d382c] font-display selection:bg-[#e58a00]/30 flex flex-col">
+    <div className="min-h-screen bg-white text-[#0d382c] font-display selection:bg-[#e58a00]/30 flex flex-col">
       {/* Navigation Bar */}
       <Header />
 
