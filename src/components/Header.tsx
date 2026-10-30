@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import { Compass, Menu, Play, X } from "lucide-react";
-import { startAgentTour } from "@/lib/agentTour";
-import { startAgentDemo } from "@/lib/agentDemo";
+import { Compass, Menu, X } from "lucide-react";
+import { startAgentGuide } from "@/lib/agentDemo";
 
-// Orange play badge with a soft pulse, used on the "Watch demo" buttons.
-const PlayDot: React.FC = () => (
+// Orange compass badge with a soft pulse, used on the "Take a tour" buttons.
+const TourDot: React.FC = () => (
   <span className="play-dot relative grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-[#f3b14a] to-[#e58a00] text-white transition-transform group-hover:scale-110">
-    <Play className="h-3 w-3 translate-x-[1px] fill-current" />
+    <Compass className="h-3.5 w-3.5" />
   </span>
 );
 
@@ -55,24 +54,16 @@ export const Header: React.FC = () => {
           ))}
         </nav>
 
-        {/* Desktop Agent Guides: segmented capsule */}
+        {/* Desktop: Take a tour */}
         <div className="hidden md:flex items-center rounded-full bg-[#0d382c]/[0.06] p-1 ring-1 ring-inset ring-[#0d382c]/[0.06]">
           <button
             type="button"
-            onClick={startAgentTour}
-            aria-label="Start tour"
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-[#0d382c]/70 hover:text-[#0d382c] transition-colors cursor-pointer"
-          >
-            <Compass className="w-4 h-4" />
-            <span className="hidden lg:inline">Tour</span>
-          </button>
-          <button
-            type="button"
-            onClick={startAgentDemo}
+            onClick={startAgentGuide}
+            aria-label="Take a tour"
             className="group inline-flex items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-3.5 text-sm font-semibold text-[#0d382c] shadow-[0_1px_2px_rgba(13,56,44,0.08),0_4px_12px_-4px_rgba(13,56,44,0.18)] hover:shadow-[0_1px_2px_rgba(13,56,44,0.1),0_6px_16px_-4px_rgba(13,56,44,0.25)] transition-shadow cursor-pointer"
           >
-            <PlayDot />
-            <span>Watch demo</span>
+            <TourDot />
+            <span>Take a tour</span>
           </button>
         </div>
 
@@ -80,12 +71,12 @@ export const Header: React.FC = () => {
         <div className="md:hidden flex items-center gap-1">
           <button
             type="button"
-            onClick={startAgentDemo}
-            aria-label="Watch demo"
+            onClick={startAgentGuide}
+            aria-label="Take a tour"
             className="group rounded-full bg-[#0d382c]/[0.06] p-1 ring-1 ring-inset ring-[#0d382c]/[0.06] cursor-pointer"
           >
             <span className="flex rounded-full bg-white p-1 shadow-[0_1px_2px_rgba(13,56,44,0.08),0_4px_12px_-4px_rgba(13,56,44,0.18)]">
-              <PlayDot />
+              <TourDot />
             </span>
           </button>
           <button
@@ -111,28 +102,17 @@ export const Header: React.FC = () => {
               {link.name}
             </a>
           ))}
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-[#0d382c]/[0.06] p-1 ring-1 ring-inset ring-[#0d382c]/[0.06]">
+          <div className="rounded-full bg-[#0d382c]/[0.06] p-1 ring-1 ring-inset ring-[#0d382c]/[0.06]">
             <button
               type="button"
               onClick={() => {
                 setMobileMenuOpen(false);
-                startAgentTour();
+                startAgentGuide();
               }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-[#0d382c]/75 cursor-pointer"
+              className="group flex w-full items-center justify-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-sm font-semibold text-[#0d382c] shadow-[0_1px_2px_rgba(13,56,44,0.08),0_4px_12px_-4px_rgba(13,56,44,0.18)] cursor-pointer"
             >
-              <Compass className="w-4 h-4" />
-              <span>Tour</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                startAgentDemo();
-              }}
-              className="group inline-flex items-center justify-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-sm font-semibold text-[#0d382c] shadow-[0_1px_2px_rgba(13,56,44,0.08),0_4px_12px_-4px_rgba(13,56,44,0.18)] cursor-pointer"
-            >
-              <PlayDot />
-              <span>Watch demo</span>
+              <TourDot />
+              <span>Take a tour</span>
             </button>
           </div>
         </div>

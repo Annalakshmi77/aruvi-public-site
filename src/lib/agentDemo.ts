@@ -24,8 +24,15 @@ const IDS = {
 
 const MOVE_MS = 800; // cursor and spotlight glide
 const PRE_CLICK_MS = 1100; // time to read the callout before a real click happens
+const TRY_TIMEOUT_MS = 9000; // try-it mode: click for the visitor if they haven't after this long
 const TYPE_CHAR_MS = 55;
 const END_HOLD_MS = 9000;
+
+// How long a callout stays up: roughly the time to read it (~4 words a second), within sensible limits.
+function readingTime(content: CalloutContent): number {
+  const words = `${content.title} ${content.text}`.trim().split(/\s+/).length;
+  return Math.min(Math.max(800 + words * 250, 1800), 4200);
+}
 
 type Placement = "top" | "bottom" | "left" | "right";
 
@@ -39,7 +46,7 @@ interface CalloutContent {
 interface Reveal extends CalloutContent {
   area: "chat" | "screen"; // the chat window, or the whole screen (fullscreen mode)
   placement?: Placement;
-  hold: number;
+  hold?: number; // defaults to reading time
 }
 
 // One beat of the demo. Scenes whose target can't be found are skipped.
@@ -49,11 +56,12 @@ interface Scene extends CalloutContent {
   click?: boolean; // ripple when the cursor arrives
   type?: string; // ghost-type this text over the target
   press?: boolean; // really click the target, so the widget reacts
+  autoPress?: boolean; // in the Tour too, click it for the visitor (simple "go back" steps)
   waitForTarget?: boolean; // target only appears after the previous scene's click
   skip?: () => boolean;
   after?: (signal: AbortSignal) => Promise<void>;
   reveal?: Reveal;
-  hold: number; // ms to stay on this scene
+  hold?: number; // ms to stay after this scene; defaults to the time needed to read it
 }
 
 const byLabel = (selector: string) => () => queryWidget(selector);
@@ -63,7 +71,6 @@ const SCENES: Scene[] = [
     icon: "bot",
     title: "Meet Peacock Assist",
     text: "Your AI tape expert. Here's a quick look at what it can do.",
-    hold: 2600,
   },
   {
     icon: "message",
@@ -83,7 +90,6 @@ const SCENES: Scene[] = [
       text: "Everything happens right here in this window.",
       area: "chat",
       placement: "left",
-      hold: 2400,
     },
     hold: 0,
   },
@@ -103,7 +109,6 @@ const SCENES: Scene[] = [
     text: "Attach artwork and get help planning a branded tape.",
     target: byLabel(WIDGET_SELECTORS.attach),
     placement: "top",
-    hold: 2800,
   },
   {
     icon: "mic",
@@ -111,7 +116,6 @@ const SCENES: Scene[] = [
     text: "Prefer talking? Record a quick message instead.",
     target: byLabel(WIDGET_SELECTORS.voiceNote),
     placement: "top",
-    hold: 2600,
   },
   {
     icon: "wave",
@@ -119,7 +123,6 @@ const SCENES: Scene[] = [
     text: "Start a voice conversation with the agent.",
     target: byLabel(WIDGET_SELECTORS.voiceMode),
     placement: "top",
-    hold: 2600,
   },
   {
     icon: "send",
@@ -128,7 +131,6 @@ const SCENES: Scene[] = [
     target: byLabel(WIDGET_SELECTORS.send),
     placement: "top",
     click: true,
-    hold: 2600,
   },
   {
     icon: "plus",
@@ -143,7 +145,6 @@ const SCENES: Scene[] = [
       text: "A clean conversation, ready for your next question.",
       area: "chat",
       placement: "left",
-      hold: 2600,
     },
     hold: 0,
   },
@@ -160,7 +161,6 @@ const SCENES: Scene[] = [
       text: "Tap any one to pick up right where you left off.",
       area: "chat",
       placement: "left",
-      hold: 3000,
     },
     hold: 0,
   },
@@ -169,6 +169,7 @@ const SCENES: Scene[] = [
     title: "Back to the chat",
     text: "Close history to return to your conversation.",
     target: byLabel(WIDGET_SELECTORS.closeHistory),
+    autoPress: true,
     placement: "bottom",
     waitForTarget: true,
     press: true,
@@ -187,7 +188,6 @@ const SCENES: Scene[] = [
       text: "Great for longer conversations and comparing options.",
       area: "screen",
       placement: "top",
-      hold: 3000,
     },
     hold: 0,
   },
@@ -196,6 +196,7 @@ const SCENES: Scene[] = [
     title: "Shrink it back",
     text: "Return to the compact chat whenever you like.",
     target: byLabel(WIDGET_SELECTORS.exitFullscreen),
+    autoPress: true,
     placement: "bottom",
     waitForTarget: true,
     press: true,
@@ -205,7 +206,6 @@ const SCENES: Scene[] = [
       text: "The chat stays out of your way while you browse.",
       area: "chat",
       placement: "left",
-      hold: 2400,
     },
     hold: 0,
   },
@@ -323,22 +323,29 @@ function moveSpot(spot: HTMLElement, rect: DOMRect | null, mode: SpotMode) {
 
 /* ---------- Callout: speech bubble placed beside the target ---------- */
 
-function buildCallout(onStartChat: () => void, onLater: () => void) {
+const PAUSE_SVG = svg('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>', 12);
+const PLAY_SVG = svg('<path d="M7 4.5v15l12-7.5z"/>', 12);
+
+function buildCallout(onStartChat: () => void) {
   const callout = el(
     IDS.callout,
     `<span class="ac-arrow" aria-hidden="true"></span>
+     <button type="button" class="ac-pause" aria-label="Pause demo"></button>
      <span class="ac-icon" aria-hidden="true"></span>
      <div class="ac-body" aria-live="polite">
        <div class="ac-title"></div>
        <div class="ac-text"></div>
+       <div class="ac-tip">Tap this card or press Next › to go faster</div>
+       <div class="ac-try">
+         <span class="ac-hint">👆 Your turn — click the glowing button</span>
+         <button type="button" class="ac-showme">Show me ${ARROW_RIGHT}</button>
+       </div>
        <div class="ac-actions">
          <button type="button" class="ac-start">Start chatting ${ARROW_RIGHT}</button>
-         <button type="button" class="ac-later">Maybe later</button>
        </div>
      </div>`,
   );
   callout.querySelector<HTMLButtonElement>(".ac-start")!.addEventListener("click", onStartChat);
-  callout.querySelector<HTMLButtonElement>(".ac-later")!.addEventListener("click", onLater);
   return callout;
 }
 
@@ -400,13 +407,15 @@ function placeCallout(callout: HTMLElement, rect: DOMRect | null, preferred?: Pl
 
 /* ---------- Control bar: progress + skip ---------- */
 
-function buildBar(onSkip: () => void) {
+function buildBar(onNext: () => void, onSkip: () => void) {
   const bar = el(
     IDS.bar,
     `<span class="ab-dot" aria-hidden="true"></span>
      <span class="ab-track" aria-hidden="true"><span></span></span>
+     <button type="button" class="ab-next" aria-label="Next step">Next <span aria-hidden="true">›</span></button>
      <button type="button" class="ab-skip" aria-label="Skip demo">Skip <span aria-hidden="true">✕</span></button>`,
   );
+  bar.querySelector<HTMLButtonElement>(".ab-next")!.addEventListener("click", onNext);
   bar.querySelector<HTMLButtonElement>(".ab-skip")!.addEventListener("click", onSkip);
   return bar;
 }
@@ -433,7 +442,13 @@ function ripple(cursor: HTMLElement) {
 }
 
 // Draws fake text over the message box so the demo never touches the real input.
-async function ghostType(target: Element, text: string, before: Element, signal: AbortSignal) {
+async function ghostType(
+  target: Element,
+  text: string,
+  before: Element,
+  wait: (ms: number) => Promise<void>, // pausable delay between letters
+  finishNow: () => boolean, // true when the visitor skipped ahead: show the full text at once
+) {
   const r = target.getBoundingClientRect();
   const style = getComputedStyle(target);
   const transparent = "rgba(0, 0, 0, 0)";
@@ -455,14 +470,28 @@ async function ghostType(target: Element, text: string, before: Element, signal:
     return;
   }
   for (let i = 1; i <= text.length; i++) {
+    if (finishNow()) {
+      ghost.textContent = text;
+      return;
+    }
     ghost.textContent = text.slice(0, i);
-    await sleep(TYPE_CHAR_MS, signal);
+    await wait(TYPE_CHAR_MS);
   }
 }
 
 /* ---------- Player ---------- */
 
-export async function startAgentDemo() {
+// "Watch demo": everything plays by itself.
+export function startAgentDemo() {
+  return runDemo(false);
+}
+
+// "Tour": the same walkthrough, but the visitor clicks the safe buttons themselves.
+export function startAgentGuide() {
+  return runDemo(true);
+}
+
+async function runDemo(interactive: boolean) {
   if (!claimGuide()) return;
 
   const controller = new AbortController();
@@ -474,9 +503,85 @@ export async function startAgentDemo() {
   const callout = buildCallout(() => {
     handOver = true;
     stop();
-  }, stop);
+  });
   const cursor = el(IDS.cursor, `${CURSOR_SVG}<span class="ad-ripple"></span>`);
-  const bar = buildBar(stop);
+
+  // Fast readers can jump ahead (Next, the → key, or tapping the callout). Whatever the demo is
+  // currently waiting on — reading time, typing, or the visitor's click — registers how to cut it short.
+  let skipAhead: (() => void) | null = null;
+  const advance = () => skipAhead?.();
+
+  // Pausing: the ⏸ button on the card, or the visitor switching to another tab. Every timed wait
+  // uses pausableTimer, so it freezes while paused and later continues with the time it had left.
+  let userPaused = false;
+  let paused = false;
+  const pauseListeners = new Set<(paused: boolean) => void>();
+  const pauseButton = callout.querySelector<HTMLButtonElement>(".ac-pause")!;
+  const updatePauseButton = () => {
+    pauseButton.innerHTML = paused ? PLAY_SVG : PAUSE_SVG;
+    pauseButton.setAttribute("aria-label", paused ? "Resume demo" : "Pause demo");
+    pauseButton.setAttribute("aria-pressed", String(paused));
+  };
+  const syncPause = () => {
+    const next = userPaused || document.hidden;
+    if (next === paused) return;
+    paused = next;
+    callout.classList.toggle("is-paused", paused);
+    spot.classList.toggle("is-paused", paused);
+    updatePauseButton();
+    for (const listener of [...pauseListeners]) listener(paused);
+  };
+  pauseButton.addEventListener("click", (e) => {
+    e.stopPropagation(); // pausing must never count as "tap the card to continue"
+    userPaused = !userPaused;
+    syncPause();
+  });
+  document.addEventListener("visibilitychange", syncPause);
+  updatePauseButton();
+
+  // Calls onDone after ms of un-paused time. Returns a cancel function.
+  const pausableTimer = (ms: number, onDone: () => void) => {
+    let remaining = ms;
+    let startedAt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const run = () => {
+      startedAt = Date.now();
+      timer = setTimeout(() => {
+        pauseListeners.delete(onPauseChange);
+        onDone();
+      }, remaining);
+    };
+    const onPauseChange = (nowPaused: boolean) => {
+      if (nowPaused) {
+        clearTimeout(timer);
+        remaining -= Date.now() - startedAt;
+      } else {
+        run();
+      }
+    };
+    pauseListeners.add(onPauseChange);
+    if (!paused) run();
+    return () => {
+      clearTimeout(timer);
+      pauseListeners.delete(onPauseChange);
+    };
+  };
+
+  const pausableSleep = (ms: number) =>
+    new Promise<void>((resolve, reject) => {
+      if (signal.aborted) return reject(abortError());
+      const onAbort = () => {
+        cancel();
+        reject(abortError());
+      };
+      const cancel = pausableTimer(ms, () => {
+        signal.removeEventListener("abort", onAbort);
+        resolve();
+      });
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
+
+  const bar = buildBar(advance, stop);
 
   cursor.style.transform = `translate(${window.innerWidth / 2}px, ${window.innerHeight * 0.65}px)`;
   if (prefersReducedMotion()) cursor.style.display = "none";
@@ -505,16 +610,74 @@ export async function startAgentDemo() {
   window.addEventListener("resize", relayout);
   focusOn(focus);
 
-  // Any click outside the demo's own controls, or Esc, stops the demo.
+  // The button the visitor is asked to click (try-it mode only).
+  let waitingFor: Element | null = null;
+  // At the final card, any outside click closes the demo (in both modes).
+  let atFinale = false;
+
+  // Draws attention back to the glowing button when the visitor clicks somewhere else.
+  const nudge = () => {
+    spot.classList.remove("is-nudge");
+    void spot.offsetWidth;
+    spot.classList.add("is-nudge");
+  };
+
+  // Auto-play: any click outside the demo's own controls stops it.
+  // Try-it: the visitor is meant to click, so stray clicks only nudge. Skip and Esc still stop it.
   const onPointerDown = (e: PointerEvent) => {
     const t = e.target as Node;
-    if (!bar.contains(t) && !callout.contains(t)) stop();
+    if (bar.contains(t) || callout.contains(t)) return;
+    if (!interactive || atFinale) return stop();
+    if (!(waitingFor && e.composedPath().includes(waitingFor))) nudge();
   };
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") stop();
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      advance();
+    }
   };
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("keydown", onKeyDown, true);
+
+  // Tapping the callout itself (not one of its buttons) also moves on. Uses the event path recorded
+  // at click time, because a button may have re-rendered (e.g. ⏸ → ▶) before the click gets here.
+  callout.addEventListener("click", (e) => {
+    if (!e.composedPath().some((node) => node instanceof HTMLButtonElement)) advance();
+  });
+
+  // A reading pause: the visitor can cut it short (Next) or freeze it (⏸).
+  const readWait = (ms: number) =>
+    new Promise<void>((resolve, reject) => {
+      if (signal.aborted) return reject(abortError());
+      const done = () => {
+        cancel();
+        signal.removeEventListener("abort", onAbort);
+        if (skipAhead === done) skipAhead = null;
+        resolve();
+      };
+      const onAbort = () => {
+        cancel();
+        if (skipAhead === done) skipAhead = null;
+        reject(abortError());
+      };
+      const cancel = pausableTimer(ms, done);
+      skipAhead = done;
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
+
+  // Typing the sample question; skipping shows the full text at once.
+  const typeInto = async (target: Element, text: string) => {
+    let finished = false;
+    skipAhead = () => {
+      finished = true;
+    };
+    try {
+      await ghostType(target, text, callout, pausableSleep, () => finished);
+    } finally {
+      skipAhead = null;
+    }
+  };
 
   const showCallout = (content: CalloutContent) => {
     fillCallout(callout, content);
@@ -522,7 +685,47 @@ export async function startAgentDemo() {
     callout.classList.add("is-visible");
   };
   const hideCallout = () => callout.classList.remove("is-visible");
+  // Not pausable: the card is hidden while gliding, so a pause here would leave no ▶ to press.
+  // The glide finishes, the next card appears, and the pause holds its reading time instead.
   const glide = () => sleep(prefersReducedMotion() ? 0 : MOVE_MS, signal);
+
+  // Try-it mode: wait for the visitor to click the real button, press "Show me", or run out of time.
+  const waitForVisitor = (target: Element) =>
+    new Promise<"visitor" | "showme" | "timeout">((resolve, reject) => {
+      const showMe = callout.querySelector<HTMLButtonElement>(".ac-showme")!;
+      const finish = (how: "visitor" | "showme" | "timeout") => {
+        cleanup();
+        resolve(how);
+      };
+      // Clicks inside the widget come from its shadow DOM, so match on the full event path.
+      const onClick = (e: MouseEvent) => {
+        if (e.composedPath().includes(target)) finish("visitor");
+      };
+      const onShowMe = () => finish("showme");
+      const onAbort = () => {
+        cleanup();
+        reject(abortError());
+      };
+      const cancelTimer = pausableTimer(TRY_TIMEOUT_MS, () => finish("timeout"));
+      function cleanup() {
+        cancelTimer();
+        document.removeEventListener("click", onClick, true);
+        showMe.removeEventListener("click", onShowMe);
+        signal.removeEventListener("abort", onAbort);
+        callout.classList.remove("is-waiting");
+        waitingFor = null;
+        if (skipAhead === onShowMe) skipAhead = null;
+      }
+
+      if (signal.aborted) return reject(abortError());
+      waitingFor = target;
+      skipAhead = onShowMe; // Next on a try-it step means "show me"
+      callout.classList.add("is-waiting");
+      applyCallout(); // the hint makes the callout taller
+      document.addEventListener("click", onClick, true);
+      showMe.addEventListener("click", onShowMe);
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
 
   // After a real click: wait for the widget to finish animating, then grow the spotlight to show the result.
   const showReveal = async (reveal: Reveal) => {
@@ -542,7 +745,7 @@ export async function startAgentDemo() {
     }
     await glide();
     showCallout(reveal);
-    await sleep(reveal.hold, signal);
+    await readWait(reveal.hold ?? readingTime(reveal));
   };
 
   try {
@@ -577,22 +780,42 @@ export async function startAgentDemo() {
       }
       await glide();
 
-      // 2. Explain it right beside the target.
+      // 2. Explain it right beside the target. The first callout also says how to go faster.
+      callout.classList.toggle("show-tip", shown === 1);
       showCallout(scene);
       if (target && scene.click) ripple(cursor);
-      if (target && scene.type) await ghostType(target, scene.type, callout, signal);
+      if (target && scene.type) await typeInto(target, scene.type);
 
-      // 3. Real click, after a pause so the visitor knows what's about to happen.
+      // 3. Real click. Auto-play does it after a short pause; try-it mode lets the visitor do it.
       if (target && scene.press) {
-        await sleep(PRE_CLICK_MS, signal);
-        ripple(cursor);
-        await sleep(180, signal);
-        (target as HTMLElement).click();
+        const visitorTurn = interactive && !scene.autoPress;
+        let visitorClicked = false;
+        if (visitorTurn) {
+          cursor.classList.remove("is-visible"); // step aside so it's clear the visitor should click
+          visitorClicked = (await waitForVisitor(target)) === "visitor";
+        }
+
+        if (!visitorClicked) {
+          if (visitorTurn) {
+            cursor.classList.add("is-visible");
+            moveCursor(cursor, target.getBoundingClientRect());
+            await glide();
+          } else if (interactive) {
+            // Tour "go back" steps: a short pause, then the demo clicks.
+            await readWait(PRE_CLICK_MS);
+          } else {
+            // Long enough to read what is about to happen.
+            await readWait(Math.max(PRE_CLICK_MS, readingTime(scene) - 800));
+          }
+          ripple(cursor);
+          await sleep(180, signal);
+          (target as HTMLElement).click();
+        }
       }
 
       await scene.after?.(signal);
       if (scene.reveal) await showReveal(scene.reveal);
-      await sleep(scene.hold, signal);
+      await readWait(scene.hold ?? readingTime(scene));
     }
 
     // Finale: point at the message box and hand over to the visitor.
@@ -609,9 +832,10 @@ export async function startAgentDemo() {
       placement: "top",
     });
     await glide();
+    atFinale = true;
     callout.classList.add("is-finished");
     showCallout(FINALE);
-    await sleep(END_HOLD_MS, signal);
+    await pausableSleep(END_HOLD_MS);
     handOver = true;
   } catch (err) {
     if (!(err instanceof DOMException && err.name === "AbortError")) console.error("[agent-demo]", err);
@@ -619,6 +843,7 @@ export async function startAgentDemo() {
     window.removeEventListener("resize", relayout);
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("keydown", onKeyDown, true);
+    document.removeEventListener("visibilitychange", syncPause);
     for (const id of Object.values(IDS)) document.getElementById(id)?.remove();
     restoreWidget();
     releaseGuide();

@@ -217,8 +217,19 @@ html {
   background: rgba(13, 56, 44, 0.12);
 }
 
-.driver-popover.peacock-tour .driver-popover-footer { margin-top: 12px; }
-.driver-popover.peacock-tour .driver-popover-navigation-btns { gap: 6px; }
+.driver-popover.peacock-tour .driver-popover-footer {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.driver-popover.peacock-tour .driver-popover-navigation-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  justify-content: flex-end;
+}
 .driver-popover.peacock-tour .driver-popover-navigation-btns button + button { margin-left: 0; }
 
 .driver-popover.peacock-tour .driver-popover-footer button {
@@ -383,6 +394,10 @@ html {
   background: linear-gradient(140deg, #f3b14a, #e58a00);
   box-shadow: 0 6px 16px -4px rgba(229, 138, 0, 0.6);
 }
+#agent-demo-callout .ac-body {
+  flex: 1;
+  min-width: 0;
+}
 #agent-demo-callout .ac-title {
   margin-top: 2px;
   font-size: 1.02rem;
@@ -396,31 +411,109 @@ html {
   line-height: 1.45;
   color: rgba(13, 56, 44, 0.7);
 }
+/* The callout can be tapped to move on (its buttons keep their own actions) */
+#agent-demo-callout.is-visible { pointer-events: auto; cursor: pointer; }
+#agent-demo-callout.is-finished { cursor: default; }
+/* Small pause / play button in the card's top-right corner */
+#agent-demo-callout .ac-pause {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  color: rgba(13, 56, 44, 0.65);
+  background: rgba(13, 56, 44, 0.07);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+#agent-demo-callout .ac-pause svg { fill: currentColor; stroke: none; }
+#agent-demo-callout .ac-pause:hover { color: #0d382c; background: rgba(13, 56, 44, 0.14); }
+#agent-demo-callout .ac-pause:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
+#agent-demo-callout .ac-title { padding-right: 26px; }
+/* Paused: the button turns orange and the animations hold still */
+#agent-demo-callout.is-paused .ac-pause { color: #0d382c; background: linear-gradient(140deg, #f3b14a, #e58a00); }
+#agent-demo-callout.is-paused .ac-hint,
+#agent-demo-spot.is-paused::after { animation-play-state: paused; }
+/* The final card has its own action and closes by itself; no pause there */
+#agent-demo-callout.is-finished .ac-pause { display: none; }
+#agent-demo-callout.is-finished .ac-title { padding-right: 0; }
+
+/* One-time tip on the first callout */
+#agent-demo-callout .ac-tip {
+  display: none;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgba(13, 56, 44, 0.5);
+}
+#agent-demo-callout.show-tip .ac-tip { display: block; }
+
+/* Try-it mode: "your turn" hint + Show me, only while waiting for the visitor's click */
+#agent-demo-callout .ac-try {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(13, 56, 44, 0.15);
+}
+#agent-demo-callout.is-waiting { pointer-events: auto; }
+#agent-demo-callout.is-waiting .ac-try { display: flex; }
+#agent-demo-callout .ac-hint {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #b86e00;
+  animation: ac-hint-bob 1.6s ease-in-out infinite;
+}
+#agent-demo-callout .ac-showme {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border: 1px solid rgba(13, 56, 44, 0.2);
+  border-radius: 9999px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0d382c;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#agent-demo-callout .ac-showme:hover { background: rgba(13, 56, 44, 0.06); }
+#agent-demo-callout .ac-showme:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
+@keyframes ac-hint-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+/* Stray click in try-it mode: the glowing ring gives a quick "over here" bounce */
+#agent-demo-spot.is-nudge::before { animation: ad-nudge 0.5s ease-out; }
+@keyframes ad-nudge {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+}
+
 #agent-demo-callout .ac-actions {
   display: none;
   align-items: center;
+  justify-content: flex-end;
+  width: 100%;
   gap: 14px;
   margin-top: 12px;
 }
 #agent-demo-callout.is-finished .ac-actions { display: flex; }
-#agent-demo-callout .ac-later {
-  padding: 4px 0;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: rgba(13, 56, 44, 0.6);
-  cursor: pointer;
-  transition: color 0.2s;
-}
-#agent-demo-callout .ac-later:hover { color: #0d382c; text-decoration: underline; }
-#agent-demo-callout .ac-later:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; border-radius: 4px; }
 #agent-demo-callout .ac-start {
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 15px;
+  padding: 8px 16px;
   border: none;
   border-radius: 9999px;
   font-family: inherit;
@@ -430,9 +523,12 @@ html {
   background: linear-gradient(140deg, #f3b14a, #e58a00);
   box-shadow: 0 8px 20px -6px rgba(229, 138, 0, 0.7);
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform 0.15s, box-shadow 0.2s;
 }
-#agent-demo-callout .ac-start:hover { transform: translateY(-1px); }
+#agent-demo-callout .ac-start:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -6px rgba(229, 138, 0, 0.85);
+}
 #agent-demo-callout .ac-start:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
 
 /* Arrow: a rotated square on the side facing the target */
@@ -546,6 +642,24 @@ html {
   background: linear-gradient(90deg, #f3b14a, #e58a00);
   transition: width 0.6s ease;
 }
+/* Next: the main control in the bar, for fast readers */
+#agent-demo-bar .ab-next {
+  padding: 6px 13px;
+  border: none;
+  border-radius: 9999px;
+  font-family: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #0d382c;
+  background: linear-gradient(140deg, #f3b14a, #e58a00);
+  box-shadow: 0 4px 12px -4px rgba(229, 138, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+#agent-demo-bar .ab-next:hover { transform: translateY(-1px); }
+#agent-demo-bar .ab-next:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
+
 #agent-demo-bar .ab-skip {
   padding: 6px 12px;
   border: none;
@@ -596,10 +710,12 @@ html {
   #agent-demo-bar .ab-track span { transition: none; }
   #agent-demo-spot.has-target::after,
   #agent-demo-bar .ab-dot,
-  #agent-demo-ghost::after { animation: none; }
+  #agent-demo-ghost::after,
+  #agent-demo-callout .ac-hint,
+  #agent-demo-spot.is-nudge::before { animation: none; }
 }
 
-/* Soft pulse around the play badge on the "Watch demo" buttons */
+/* Soft pulse around the orange badge on the "Take a tour" buttons */
 .play-dot::before {
   content: "";
   position: absolute;
