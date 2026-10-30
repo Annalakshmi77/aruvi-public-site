@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { TapeHeroImage } from "@/components/TapeHeroImage";
 import { TapeMarquee } from "@/components/TapeMarquee";
@@ -8,8 +8,13 @@ import { WidthsSection } from "@/components/WidthsSection";
 import { ContactSection } from "@/components/ContactSection";
 import { Footer } from "@/components/Footer";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { checkAutoStartTour } from "@/lib/agentDemo";
 
 export function App() {
+  useEffect(() => {
+    void checkAutoStartTour();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-[#0d382c] font-display selection:bg-[#e58a00]/30 flex flex-col">
       {/* Navigation Bar */}

@@ -85,6 +85,20 @@ export function waitForChatWindow(timeoutMs = 5000): Promise<Element | null> {
   });
 }
 
+// Resolves once the widget launcher button/bubble is rendered and visible in DOM, or null after timeout.
+export function waitForWidgetLauncher(timeoutMs = 8000): Promise<Element | null> {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const check = () => {
+      const launcher = findAgentLauncher();
+      if (launcher && isVisible(launcher)) return resolve(launcher);
+      if (Date.now() - started > timeoutMs) return resolve(null);
+      setTimeout(check, 150);
+    };
+    check();
+  });
+}
+
 // Opens the chat and waits for its open animation to settle before positions are measured.
 export async function openChat(): Promise<boolean> {
   window.Perfox?.("open");

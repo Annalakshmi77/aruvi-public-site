@@ -8,6 +8,7 @@ import {
   openChat,
   queryWidget,
   releaseGuide,
+  waitForWidgetLauncher,
 } from "@/lib/agentWidget";
 import { ARROW_RIGHT, ICONS, svg, type IconName } from "@/lib/agentIcons";
 
@@ -480,6 +481,36 @@ async function ghostType(
 }
 
 /* ---------- Player ---------- */
+
+/**
+ * Checks if the page was opened with ?tour=demo in the URL.
+ * If present:
+ * 1. Silently cleans the URL bar immediately without reload.
+ * 2. Waits until the async Perfox chat widget has loaded into the DOM.
+ * 3. Starts the tour automatically.
+ */
+export async function checkAutoStartTour() {
+  if (typeof window === "undefined") return;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const tour = urlParams.get("tour");
+
+  if (tour === "demo" || tour === "tour" || tour === "agent" || tour === "1") {
+    // 1. Remove the marker right away without reloading or breaking browser history
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("tour");
+    const newPath = cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : "") + cleanUrl.hash;
+    window.history.replaceState({}, document.title, newPath);
+
+    // 2. Wait for the Perfox widget launcher bubble to mount in the DOM (up to 8s)
+    await waitForWidgetLauncher(8000).catch(() => null);
+
+    // 3. Brief settle delay for entrance animation, then start the tour
+    setTimeout(() => {
+      startAgentGuide();
+    }, 400);
+  }
+}
 
 // "Watch demo": everything plays by itself.
 export function startAgentDemo() {
