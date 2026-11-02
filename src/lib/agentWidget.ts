@@ -34,6 +34,12 @@ function widgetRoot(): ShadowRoot | HTMLElement | null {
   return host?.shadowRoot ?? host;
 }
 
+// True when the event happened inside the widget (its shadow DOM shows up in the composed path).
+export function isWidgetEvent(e: Event): boolean {
+  const host = document.getElementById("perfox-widget");
+  return host !== null && e.composedPath().includes(host);
+}
+
 export function queryWidget(selector: string): Element | null {
   const found = widgetRoot()?.querySelectorAll(selector) ?? [];
   return Array.from(found).find(isVisible) ?? null;

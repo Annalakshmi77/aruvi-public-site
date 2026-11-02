@@ -22,3 +22,5 @@ export const svg = (paths: string, size = 18) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
 
 export const ARROW_RIGHT = svg('<path d="M5 12h14M12 5l7 7-7 7"/>', 15);
+export const CHEVRON_LEFT = svg('<path d="m15 18-6-6 6-6"/>', 18);
+export const CHEVRON_RIGHT = svg('<path d="m9 18 6-6-6-6"/>', 18);

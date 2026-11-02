@@ -95,39 +95,51 @@
   }
 }
 
-html { 
-  scroll-behavior: smooth; 
-  scroll-padding-top: 4.5rem; 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
 }
 
-@keyframes tape-scroll { 
-  from { transform: translateX(0); } 
-  to { transform: translateX(-50%); } 
+@keyframes tape-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
-.tape-marquee { 
+.tape-marquee {
   display: flex;
   width: max-content;
-  animation: tape-scroll 24s linear infinite; 
+  animation: tape-scroll 24s linear infinite;
 }
 
 .tape-marquee:hover {
   animation-play-state: paused;
 }
 
-.swatch-transparent { 
-  background: repeating-conic-gradient(#e5decf 0 25%, #fbf8f2 0 50%) 50% / 8px 8px; 
+.swatch-transparent {
+  background: repeating-conic-gradient(#e5decf 0 25%, #fbf8f2 0 50%) 50% / 8px 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  .tape-marquee { animation: none; }
+  html {
+    scroll-behavior: auto;
+  }
+
+  .tape-marquee {
+    animation: none;
+  }
 }
 
 /* ---------- Agent tour (driver.js) ---------- */
 
 /* Layering: overlay < highlight ring < popover, all above the Perfox chat widget */
-.driver-overlay { z-index: 2147483645 !important; }
+.driver-overlay {
+  z-index: 2147483645 !important;
+}
 
 .driver-popover.peacock-tour {
   --pt-bg: #ffffff;
@@ -158,6 +170,7 @@ html {
   height: 3px;
   background: rgba(13, 56, 44, 0.08);
 }
+
 .peacock-tour .pt-bar span {
   display: block;
   height: 100%;
@@ -172,8 +185,10 @@ html {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding-right: 26px; /* room for the close button */
+  padding-right: 26px;
+  /* room for the close button */
 }
+
 .peacock-tour .pt-icon {
   flex: none;
   display: grid;
@@ -193,6 +208,7 @@ html {
   letter-spacing: -0.01em;
   color: var(--pt-text);
 }
+
 .driver-popover.peacock-tour .driver-popover-description {
   margin-top: 8px;
   font-size: 0.82rem;
@@ -212,6 +228,7 @@ html {
   background: rgba(13, 56, 44, 0.06);
   transition: background 0.2s, color 0.2s;
 }
+
 .driver-popover.peacock-tour .driver-popover-close-btn:hover {
   color: var(--pt-text);
   background: rgba(13, 56, 44, 0.12);
@@ -223,6 +240,7 @@ html {
   align-items: center;
   justify-content: space-between;
 }
+
 .driver-popover.peacock-tour .driver-popover-navigation-btns {
   display: flex;
   align-items: center;
@@ -230,7 +248,10 @@ html {
   margin-left: auto;
   justify-content: flex-end;
 }
-.driver-popover.peacock-tour .driver-popover-navigation-btns button + button { margin-left: 0; }
+
+.driver-popover.peacock-tour .driver-popover-navigation-btns button+button {
+  margin-left: 0;
+}
 
 .driver-popover.peacock-tour .driver-popover-footer button {
   display: inline-flex;
@@ -246,34 +267,58 @@ html {
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
 }
+
 .driver-popover.peacock-tour .driver-popover-next-btn {
   color: #0d382c;
   background: linear-gradient(140deg, #f3b14a, var(--pt-accent));
   border: none;
   box-shadow: 0 8px 20px -6px rgba(229, 138, 0, 0.7);
 }
+
 .driver-popover.peacock-tour .driver-popover-next-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 24px -6px rgba(229, 138, 0, 0.85);
 }
+
 .driver-popover.peacock-tour .driver-popover-prev-btn {
   color: var(--pt-text);
   background: transparent;
   border: 1px solid rgba(13, 56, 44, 0.2);
 }
-.driver-popover.peacock-tour .driver-popover-prev-btn:hover { background: rgba(13, 56, 44, 0.05); }
-.driver-popover.peacock-tour .driver-popover-btn-disabled { display: none !important; }
+
+.driver-popover.peacock-tour .driver-popover-prev-btn:hover {
+  background: rgba(13, 56, 44, 0.05);
+}
+
+.driver-popover.peacock-tour .driver-popover-btn-disabled {
+  display: none !important;
+}
+
 .driver-popover.peacock-tour .driver-popover-footer button:focus-visible {
   outline: 2px solid var(--pt-accent);
   outline-offset: 2px;
 }
 
 /* Arrow matches the card colour */
-.driver-popover.peacock-tour .driver-popover-arrow { border-width: 7px; }
-.driver-popover.peacock-tour .driver-popover-arrow-side-top { border-top-color: var(--pt-bg); }
-.driver-popover.peacock-tour .driver-popover-arrow-side-bottom { border-bottom-color: var(--pt-bg); }
-.driver-popover.peacock-tour .driver-popover-arrow-side-left { border-left-color: var(--pt-bg); }
-.driver-popover.peacock-tour .driver-popover-arrow-side-right { border-right-color: var(--pt-bg); }
+.driver-popover.peacock-tour .driver-popover-arrow {
+  border-width: 7px;
+}
+
+.driver-popover.peacock-tour .driver-popover-arrow-side-top {
+  border-top-color: var(--pt-bg);
+}
+
+.driver-popover.peacock-tour .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--pt-bg);
+}
+
+.driver-popover.peacock-tour .driver-popover-arrow-side-left {
+  border-left-color: var(--pt-bg);
+}
+
+.driver-popover.peacock-tour .driver-popover-arrow-side-right {
+  border-right-color: var(--pt-bg);
+}
 
 /* Pulsing ring around the highlighted element */
 #agent-tour-ring {
@@ -284,30 +329,63 @@ html {
   opacity: 0;
   transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
 }
+
 #agent-tour-ring.is-visible {
   opacity: 1;
   animation: pt-ring-in 0.35s ease-out, pt-pulse 1.8s ease-out 0.35s infinite;
 }
 
 @keyframes pt-pop {
-  from { opacity: 0; transform: translateY(8px) scale(0.96); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-@keyframes pt-grow { from { width: 0; } }
+
+@keyframes pt-grow {
+  from {
+    width: 0;
+  }
+}
+
 @keyframes pt-ring-in {
-  from { opacity: 0; transform: scale(1.25); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
+
 @keyframes pt-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.55), 0 0 18px rgba(229, 138, 0, 0.45); }
-  70% { box-shadow: 0 0 0 12px rgba(229, 138, 0, 0), 0 0 18px rgba(229, 138, 0, 0.45); }
-  100% { box-shadow: 0 0 0 0 rgba(229, 138, 0, 0), 0 0 18px rgba(229, 138, 0, 0.45); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.55), 0 0 18px rgba(229, 138, 0, 0.45);
+  }
+
+  70% {
+    box-shadow: 0 0 0 12px rgba(229, 138, 0, 0), 0 0 18px rgba(229, 138, 0, 0.45);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 138, 0, 0), 0 0 18px rgba(229, 138, 0, 0.45);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .driver-popover.peacock-tour,
   .peacock-tour .pt-bar span,
-  #agent-tour-ring.is-visible { animation: none; }
+  #agent-tour-ring.is-visible {
+    animation: none;
+  }
 }
 
 /* ---------- Agent auto-play demo ---------- */
@@ -328,9 +406,16 @@ html {
     box-shadow 0.6s ease,
     opacity 0.4s ease;
 }
-#agent-demo-spot.is-visible { opacity: 1; }
+
+#agent-demo-spot.is-visible {
+  opacity: 1;
+}
+
 /* Fullscreen: the hole opens to the whole screen and the dim fades away */
-#agent-demo-spot.is-clear { box-shadow: 0 0 0 200vmax rgba(4, 34, 26, 0); }
+#agent-demo-spot.is-clear {
+  box-shadow: 0 0 0 200vmax rgba(4, 34, 26, 0);
+}
+
 /* Revealing a whole panel: a calm glowing outline, no pulse */
 #agent-demo-spot.is-area::before {
   content: "";
@@ -340,6 +425,7 @@ html {
   border: 2px solid rgba(229, 138, 0, 0.9);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7), 0 0 36px 4px rgba(229, 138, 0, 0.35);
 }
+
 /* Bright double ring + pulse so it is obvious what is being pointed at */
 #agent-demo-spot.has-target::before {
   content: "";
@@ -349,6 +435,7 @@ html {
   border: 3px solid #e58a00;
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9), 0 0 28px 6px rgba(229, 138, 0, 0.55);
 }
+
 #agent-demo-spot.has-target::after {
   content: "";
   position: absolute;
@@ -380,8 +467,15 @@ html {
   scale: 0.94;
   transition: opacity 0.25s ease, scale 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25);
 }
-#agent-demo-callout.is-visible { opacity: 1; scale: 1; }
-#agent-demo-callout.is-finished { pointer-events: auto; }
+
+#agent-demo-callout.is-visible {
+  opacity: 1;
+  scale: 1;
+}
+
+#agent-demo-callout.is-finished {
+  pointer-events: auto;
+}
 
 #agent-demo-callout .ac-icon {
   flex: none;
@@ -394,10 +488,12 @@ html {
   background: linear-gradient(140deg, #f3b14a, #e58a00);
   box-shadow: 0 6px 16px -4px rgba(229, 138, 0, 0.6);
 }
+
 #agent-demo-callout .ac-body {
   flex: 1;
   min-width: 0;
 }
+
 #agent-demo-callout .ac-title {
   margin-top: 2px;
   font-size: 1.02rem;
@@ -405,15 +501,18 @@ html {
   line-height: 1.25;
   letter-spacing: -0.01em;
 }
+
 #agent-demo-callout .ac-text {
   margin-top: 3px;
   font-size: 0.86rem;
   line-height: 1.45;
   color: rgba(13, 56, 44, 0.7);
 }
-/* The callout can be tapped to move on (its buttons keep their own actions) */
-#agent-demo-callout.is-visible { pointer-events: auto; cursor: pointer; }
-#agent-demo-callout.is-finished { cursor: default; }
+
+#agent-demo-callout.is-visible {
+  pointer-events: auto;
+}
+
 /* Small pause / play button in the card's top-right corner */
 #agent-demo-callout .ac-pause {
   position: absolute;
@@ -431,72 +530,217 @@ html {
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
-#agent-demo-callout .ac-pause svg { fill: currentColor; stroke: none; }
-#agent-demo-callout .ac-pause:hover { color: #0d382c; background: rgba(13, 56, 44, 0.14); }
-#agent-demo-callout .ac-pause:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
-#agent-demo-callout .ac-title { padding-right: 26px; }
-/* Paused: the button turns orange and the animations hold still */
-#agent-demo-callout.is-paused .ac-pause { color: #0d382c; background: linear-gradient(140deg, #f3b14a, #e58a00); }
-#agent-demo-callout.is-paused .ac-hint,
-#agent-demo-spot.is-paused::after { animation-play-state: paused; }
-/* The final card has its own action and closes by itself; no pause there */
-#agent-demo-callout.is-finished .ac-pause { display: none; }
-#agent-demo-callout.is-finished .ac-title { padding-right: 0; }
 
-/* One-time tip on the first callout */
-#agent-demo-callout .ac-tip {
-  display: none;
-  margin-top: 8px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: rgba(13, 56, 44, 0.5);
+#agent-demo-callout .ac-pause svg {
+  fill: currentColor;
+  stroke: none;
 }
-#agent-demo-callout.show-tip .ac-tip { display: block; }
 
-/* Try-it mode: "your turn" hint + Show me, only while waiting for the visitor's click */
+#agent-demo-callout .ac-pause:hover {
+  color: #0d382c;
+  background: rgba(13, 56, 44, 0.14);
+}
+
+#agent-demo-callout .ac-pause:focus-visible {
+  outline: 2px solid #e58a00;
+  outline-offset: 2px;
+}
+
+#agent-demo-callout .ac-title {
+  padding-right: 26px;
+}
+
+/* Paused: the button turns orange and the animations hold still */
+#agent-demo-callout.is-paused .ac-pause {
+  color: #0d382c;
+  background: linear-gradient(140deg, #f3b14a, #e58a00);
+}
+
+#agent-demo-callout.is-paused .ac-hint,
+#agent-demo-spot.is-paused::after {
+  animation-play-state: paused;
+}
+
+/* The final card has its own action and closes by itself; no pause there */
+#agent-demo-callout.is-finished .ac-pause {
+  display: none;
+}
+
+#agent-demo-callout.is-finished .ac-title {
+  padding-right: 0;
+}
+
+/* Try-it mode: "your turn" hint, only while waiting for the visitor's click */
 #agent-demo-callout .ac-try {
   display: none;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed rgba(13, 56, 44, 0.15);
 }
-#agent-demo-callout.is-waiting { pointer-events: auto; }
-#agent-demo-callout.is-waiting .ac-try { display: flex; }
+
+#agent-demo-callout.is-waiting {
+  pointer-events: auto;
+}
+
+#agent-demo-callout.is-waiting .ac-try {
+  display: block;
+}
+
 #agent-demo-callout .ac-hint {
+  display: inline-block;
   font-size: 0.82rem;
   font-weight: 700;
   color: #b86e00;
   animation: ac-hint-bob 1.6s ease-in-out infinite;
 }
+
+/* Step navigation: icon-only Back / Next in the card's bottom-right corner */
+#agent-demo-callout .ac-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#agent-demo-callout.is-finished .ac-nav {
+  display: none;
+}
+
+#agent-demo-callout .ac-prev,
+#agent-demo-callout .ac-next,
 #agent-demo-callout .ac-showme {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
-  border: 1px solid rgba(13, 56, 44, 0.2);
+  justify-content: center;
+  height: 34px;
+  padding: 0;
   border-radius: 9999px;
-  background: transparent;
   font-family: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #0d382c;
   cursor: pointer;
-  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.25), background 0.2s, border-color 0.2s,
+    box-shadow 0.2s, color 0.2s, opacity 0.2s;
 }
-#agent-demo-callout .ac-showme:hover { background: rgba(13, 56, 44, 0.06); }
-#agent-demo-callout .ac-showme:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
+
+/* Comfortable 44px tap target around the 34px circle */
+#agent-demo-callout .ac-prev::after,
+#agent-demo-callout .ac-next::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+}
+
+#agent-demo-callout .ac-prev svg,
+#agent-demo-callout .ac-next svg,
+#agent-demo-callout .ac-showme svg {
+  transition: transform 0.2s ease;
+}
+
+#agent-demo-callout .ac-prev:focus-visible,
+#agent-demo-callout .ac-next:focus-visible,
+#agent-demo-callout .ac-showme:focus-visible {
+  outline: 2px solid #e58a00;
+  outline-offset: 3px;
+}
+
+#agent-demo-callout .ac-prev:active:not(:disabled),
+#agent-demo-callout .ac-next:active,
+#agent-demo-callout .ac-showme:active {
+  transform: scale(0.92);
+}
+
+/* Back: quiet outline */
+#agent-demo-callout .ac-prev {
+  width: 34px;
+  border: 1px solid rgba(13, 56, 44, 0.14);
+  color: #0d382c;
+  background: #ffffff;
+}
+
+#agent-demo-callout .ac-prev:hover:not(:disabled) {
+  border-color: rgba(13, 56, 44, 0.28);
+  background: rgba(13, 56, 44, 0.05);
+}
+
+#agent-demo-callout .ac-prev:hover:not(:disabled) svg {
+  transform: translateX(-2px);
+}
+
+#agent-demo-callout .ac-prev:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Next and Show me: solid brand green, the main action */
+#agent-demo-callout .ac-next,
+#agent-demo-callout .ac-showme {
+  border: none;
+  color: #ffffff;
+  background: linear-gradient(160deg, #1a5a47, #0d382c);
+  box-shadow: 0 6px 14px -6px rgba(13, 56, 44, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+#agent-demo-callout .ac-next {
+  width: 34px;
+}
+
+#agent-demo-callout .ac-next:hover,
+#agent-demo-callout .ac-showme:hover {
+  box-shadow: 0 8px 18px -6px rgba(13, 56, 44, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+#agent-demo-callout .ac-next:hover svg,
+#agent-demo-callout .ac-showme:hover svg {
+  transform: translateX(2px);
+}
+
+/* On a try-it step, "Show me" replaces Next so the button says what it will do */
+#agent-demo-callout .ac-showme {
+  display: none;
+  gap: 6px;
+  padding: 0 14px 0 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+#agent-demo-callout.is-waiting .ac-showme {
+  display: inline-flex;
+}
+
+#agent-demo-callout.is-waiting .ac-next {
+  display: none;
+}
+
 @keyframes ac-hint-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
 }
+
 /* Stray click in try-it mode: the glowing ring gives a quick "over here" bounce */
-#agent-demo-spot.is-nudge::before { animation: ad-nudge 0.5s ease-out; }
+#agent-demo-spot.is-nudge::before {
+  animation: ad-nudge 0.5s ease-out;
+}
+
 @keyframes ad-nudge {
-  0%, 100% { transform: scale(1); }
-  40% { transform: scale(1.18); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.18);
+  }
 }
 
 #agent-demo-callout .ac-actions {
@@ -507,7 +751,11 @@ html {
   gap: 14px;
   margin-top: 12px;
 }
-#agent-demo-callout.is-finished .ac-actions { display: flex; }
+
+#agent-demo-callout.is-finished .ac-actions {
+  display: flex;
+}
+
 #agent-demo-callout .ac-start {
   margin-left: auto;
   display: inline-flex;
@@ -525,11 +773,16 @@ html {
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.2s;
 }
+
 #agent-demo-callout .ac-start:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 24px -6px rgba(229, 138, 0, 0.85);
 }
-#agent-demo-callout .ac-start:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
+
+#agent-demo-callout .ac-start:focus-visible {
+  outline: 2px solid #e58a00;
+  outline-offset: 2px;
+}
 
 /* Arrow: a rotated square on the side facing the target */
 #agent-demo-callout .ac-arrow {
@@ -540,11 +793,30 @@ html {
   transform: rotate(45deg);
   border-radius: 3px;
 }
-#agent-demo-callout[data-side="none"] .ac-arrow { display: none; }
-#agent-demo-callout[data-side="top"] .ac-arrow { bottom: -6px; left: calc(var(--arrow) - 7px); }
-#agent-demo-callout[data-side="bottom"] .ac-arrow { top: -6px; left: calc(var(--arrow) - 7px); }
-#agent-demo-callout[data-side="left"] .ac-arrow { right: -6px; top: calc(var(--arrow) - 7px); }
-#agent-demo-callout[data-side="right"] .ac-arrow { left: -6px; top: calc(var(--arrow) - 7px); }
+
+#agent-demo-callout[data-side="none"] .ac-arrow {
+  display: none;
+}
+
+#agent-demo-callout[data-side="top"] .ac-arrow {
+  bottom: -6px;
+  left: calc(var(--arrow) - 7px);
+}
+
+#agent-demo-callout[data-side="bottom"] .ac-arrow {
+  top: -6px;
+  left: calc(var(--arrow) - 7px);
+}
+
+#agent-demo-callout[data-side="left"] .ac-arrow {
+  right: -6px;
+  top: calc(var(--arrow) - 7px);
+}
+
+#agent-demo-callout[data-side="right"] .ac-arrow {
+  left: -6px;
+  top: calc(var(--arrow) - 7px);
+}
 
 /* Fake cursor: the arrow tip sits on the translate() point */
 #agent-demo-cursor {
@@ -558,8 +830,15 @@ html {
   filter: drop-shadow(0 4px 8px rgba(4, 34, 26, 0.4));
   transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.3s ease;
 }
-#agent-demo-cursor.is-visible { opacity: 1; }
-#agent-demo-cursor svg { display: block; }
+
+#agent-demo-cursor.is-visible {
+  opacity: 1;
+}
+
+#agent-demo-cursor svg {
+  display: block;
+}
+
 #agent-demo-cursor .ad-ripple {
   position: absolute;
   left: 5px;
@@ -573,7 +852,10 @@ html {
   opacity: 0;
   transform: scale(0.2);
 }
-#agent-demo-cursor.is-clicking .ad-ripple { animation: ad-ripple 0.6s ease-out; }
+
+#agent-demo-cursor.is-clicking .ad-ripple {
+  animation: ad-ripple 0.6s ease-out;
+}
 
 /* Typed text drawn over the chat's message box */
 #agent-demo-ghost {
@@ -584,6 +866,7 @@ html {
   overflow: hidden;
   white-space: nowrap;
 }
+
 #agent-demo-ghost::after {
   content: "";
   display: inline-block;
@@ -619,7 +902,12 @@ html {
   transform: translateY(12px);
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
-#agent-demo-bar.is-visible { opacity: 1; transform: none; }
+
+#agent-demo-bar.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
 #agent-demo-bar .ab-dot {
   width: 8px;
   height: 8px;
@@ -627,6 +915,7 @@ html {
   background: #e58a00;
   animation: ad-dot 1.6s ease-out infinite;
 }
+
 #agent-demo-bar .ab-track {
   width: 90px;
   height: 4px;
@@ -634,6 +923,7 @@ html {
   overflow: hidden;
   background: rgba(13, 56, 44, 0.1);
 }
+
 #agent-demo-bar .ab-track span {
   display: block;
   width: 0;
@@ -642,23 +932,6 @@ html {
   background: linear-gradient(90deg, #f3b14a, #e58a00);
   transition: width 0.6s ease;
 }
-/* Next: the main control in the bar, for fast readers */
-#agent-demo-bar .ab-next {
-  padding: 6px 13px;
-  border: none;
-  border-radius: 9999px;
-  font-family: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  color: #0d382c;
-  background: linear-gradient(140deg, #f3b14a, #e58a00);
-  box-shadow: 0 4px 12px -4px rgba(229, 138, 0, 0.6);
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-#agent-demo-bar .ab-next:hover { transform: translateY(-1px); }
-#agent-demo-bar .ab-next:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
 
 #agent-demo-bar .ab-skip {
   padding: 6px 12px;
@@ -673,8 +946,15 @@ html {
   cursor: pointer;
   transition: background 0.2s;
 }
-#agent-demo-bar .ab-skip:hover { background: rgba(13, 56, 44, 0.15); }
-#agent-demo-bar .ab-skip:focus-visible { outline: 2px solid #e58a00; outline-offset: 2px; }
+
+#agent-demo-bar .ab-skip:hover {
+  background: rgba(13, 56, 44, 0.15);
+}
+
+#agent-demo-bar .ab-skip:focus-visible {
+  outline: 2px solid #e58a00;
+  outline-offset: 2px;
+}
 
 /* On phones the chat fills the bottom of the screen, so the bar moves to the top */
 @media (max-width: 640px) {
@@ -684,35 +964,73 @@ html {
     bottom: auto;
     transform: translate(-50%, -12px);
   }
-  #agent-demo-bar.is-visible { transform: translate(-50%, 0); }
-  #agent-demo-bar .ab-track { width: 60px; }
+
+  #agent-demo-bar.is-visible {
+    transform: translate(-50%, 0);
+  }
+
+  #agent-demo-bar .ab-track {
+    width: 60px;
+  }
 }
 
 @keyframes ad-spot-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.7); }
-  100% { box-shadow: 0 0 0 18px rgba(229, 138, 0, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.7);
+  }
+
+  100% {
+    box-shadow: 0 0 0 18px rgba(229, 138, 0, 0);
+  }
 }
+
 @keyframes ad-ripple {
-  0% { opacity: 1; transform: scale(0.2); }
-  100% { opacity: 0; transform: scale(1.4); }
+  0% {
+    opacity: 1;
+    transform: scale(0.2);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
 }
-@keyframes ad-blink { 50% { opacity: 0; } }
+
+@keyframes ad-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 @keyframes ad-dot {
-  0% { box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.55); }
-  100% { box-shadow: 0 0 0 8px rgba(229, 138, 0, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.55);
+  }
+
+  100% {
+    box-shadow: 0 0 0 8px rgba(229, 138, 0, 0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   #agent-demo-spot,
   #agent-demo-callout,
   #agent-demo-cursor,
   #agent-demo-bar,
-  #agent-demo-bar .ab-track span { transition: none; }
+  #agent-demo-bar .ab-track span,
+  #agent-demo-callout .ac-nav button,
+  #agent-demo-callout .ac-nav svg {
+    transition: none;
+  }
+
   #agent-demo-spot.has-target::after,
   #agent-demo-bar .ab-dot,
   #agent-demo-ghost::after,
   #agent-demo-callout .ac-hint,
-  #agent-demo-spot.is-nudge::before { animation: none; }
+  #agent-demo-spot.is-nudge::before {
+    animation: none;
+  }
 }
 
 /* Soft pulse around the orange badge on the "Take a tour" buttons */
@@ -723,10 +1041,20 @@ html {
   border-radius: 9999px;
   animation: play-dot-pulse 2.4s ease-out 1s infinite;
 }
+
 @keyframes play-dot-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.5); }
-  60%, 100% { box-shadow: 0 0 0 7px rgba(229, 138, 0, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.5);
+  }
+
+  60%,
+  100% {
+    box-shadow: 0 0 0 7px rgba(229, 138, 0, 0);
+  }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .play-dot::before { animation: none; }
+  .play-dot::before {
+    animation: none;
+  }
 }

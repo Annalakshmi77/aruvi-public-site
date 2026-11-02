@@ -5,12 +5,13 @@ import {
   findChatWindow,
   focusMessageBox,
   isChatOpen,
+  isWidgetEvent,
   openChat,
   queryWidget,
   releaseGuide,
   waitForWidgetLauncher,
 } from "@/lib/agentWidget";
-import { ARROW_RIGHT, ICONS, svg, type IconName } from "@/lib/agentIcons";
+import { ARROW_RIGHT, CHEVRON_LEFT, CHEVRON_RIGHT, ICONS, svg, type IconName } from "@/lib/agentIcons";
 
 const SAMPLE_QUESTION = "What are the widths available in red tape?";
 
@@ -256,7 +257,7 @@ function el(id: string, html = "", before?: Element | null): HTMLDivElement {
 // Waits briefly for a target that appears after an earlier click (e.g. the history panel's close button).
 async function resolveTarget(find: () => Element | null, signal: AbortSignal, timeoutMs: number) {
   const started = Date.now();
-  for (;;) {
+  for (; ;) {
     const found = find();
     if (found || Date.now() - started > timeoutMs) return found;
     await sleep(150, signal);
@@ -327,19 +328,26 @@ function moveSpot(spot: HTMLElement, rect: DOMRect | null, mode: SpotMode) {
 const PAUSE_SVG = svg('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>', 12);
 const PLAY_SVG = svg('<path d="M7 4.5v15l12-7.5z"/>', 12);
 
-function buildCallout(onStartChat: () => void) {
+// Back / Next live on the card itself, as icon buttons in its bottom-right corner.
+// On a try-it step, "Show me" takes Next's place so the button says what it will do.
+function buildCallout(onStartChat: () => void, onBack: () => void, onNext: () => void) {
   const callout = el(
     IDS.callout,
     `<span class="ac-arrow" aria-hidden="true"></span>
      <button type="button" class="ac-pause" aria-label="Pause demo"></button>
      <span class="ac-icon" aria-hidden="true"></span>
-     <div class="ac-body" aria-live="polite">
-       <div class="ac-title"></div>
-       <div class="ac-text"></div>
-       <div class="ac-tip">Tap this card or press Next › to go faster</div>
+     <div class="ac-body">
+       <div class="ac-copy" aria-live="polite">
+         <div class="ac-title"></div>
+         <div class="ac-text"></div>
+       </div>
        <div class="ac-try">
          <span class="ac-hint">👆 Your turn — click the glowing button</span>
+       </div>
+       <div class="ac-nav">
+         <button type="button" class="ac-prev" aria-label="Previous step" title="Previous">${CHEVRON_LEFT}</button>
          <button type="button" class="ac-showme">Show me ${ARROW_RIGHT}</button>
+         <button type="button" class="ac-next" aria-label="Next step" title="Next">${CHEVRON_RIGHT}</button>
        </div>
        <div class="ac-actions">
          <button type="button" class="ac-start">Start chatting ${ARROW_RIGHT}</button>
@@ -347,6 +355,8 @@ function buildCallout(onStartChat: () => void) {
      </div>`,
   );
   callout.querySelector<HTMLButtonElement>(".ac-start")!.addEventListener("click", onStartChat);
+  callout.querySelector<HTMLButtonElement>(".ac-prev")!.addEventListener("click", onBack);
+  callout.querySelector<HTMLButtonElement>(".ac-next")!.addEventListener("click", onNext);
   return callout;
 }
 
@@ -406,17 +416,15 @@ function placeCallout(callout: HTMLElement, rect: DOMRect | null, preferred?: Pl
   callout.style.transform = `translate(${x}px, ${y}px)`;
 }
 
-/* ---------- Control bar: progress + skip ---------- */
+/* ---------- Control bar: progress + skip (step navigation is on the card) ---------- */
 
-function buildBar(onNext: () => void, onSkip: () => void) {
+function buildBar(onSkip: () => void) {
   const bar = el(
     IDS.bar,
     `<span class="ab-dot" aria-hidden="true"></span>
      <span class="ab-track" aria-hidden="true"><span></span></span>
-     <button type="button" class="ab-next" aria-label="Next step">Next <span aria-hidden="true">›</span></button>
      <button type="button" class="ab-skip" aria-label="Skip demo">Skip <span aria-hidden="true">✕</span></button>`,
   );
-  bar.querySelector<HTMLButtonElement>(".ab-next")!.addEventListener("click", onNext);
   bar.querySelector<HTMLButtonElement>(".ab-skip")!.addEventListener("click", onSkip);
   return bar;
 }
@@ -530,17 +538,44 @@ async function runDemo(interactive: boolean) {
   const stop = () => controller.abort();
   let handOver = false;
 
-  const spot = el(IDS.spot);
-  const callout = buildCallout(() => {
-    handOver = true;
-    stop();
-  });
-  const cursor = el(IDS.cursor, `${CURSOR_SVG}<span class="ad-ripple"></span>`);
+  // Each step gets its own signal, so Back can cut a step short without ending the demo.
+  // Stopping the demo aborts whichever step is running.
+  let step = new AbortController();
+  let stepSignal = step.signal;
+  const newStep = () => {
+    step = new AbortController();
+    stepSignal = step.signal;
+    if (signal.aborted) step.abort();
+  };
+  signal.addEventListener("abort", () => step.abort(), { once: true });
 
-  // Fast readers can jump ahead (Next, the → key, or tapping the callout). Whatever the demo is
-  // currently waiting on — reading time, typing, or the visitor's click — registers how to cut it short.
+  // Fast readers can jump ahead (Next or the → key). Whatever the demo is currently waiting on —
+  // reading time, typing, or the visitor's click — registers how to cut it short.
   let skipAhead: (() => void) | null = null;
   const advance = () => skipAhead?.();
+
+  // Back (‹ or the ← key) abandons the current step; the player then picks the card to return to.
+  let wantBack = false;
+  let scenesDone = false;
+  // At the final card, any outside click closes the demo (in both modes).
+  let atFinale = false;
+  const goBack = () => {
+    if (scenesDone || prevButton.disabled || wantBack) return;
+    wantBack = true;
+    step.abort();
+  };
+
+  const spot = el(IDS.spot);
+  const callout = buildCallout(
+    () => {
+      handOver = true;
+      stop();
+    },
+    goBack,
+    advance,
+  );
+  const prevButton = callout.querySelector<HTMLButtonElement>(".ac-prev")!;
+  const cursor = el(IDS.cursor, `${CURSOR_SVG}<span class="ad-ripple"></span>`);
 
   // Pausing: the ⏸ button on the card, or the visitor switching to another tab. Every timed wait
   // uses pausableTimer, so it freezes while paused and later continues with the time it had left.
@@ -562,8 +597,7 @@ async function runDemo(interactive: boolean) {
     updatePauseButton();
     for (const listener of [...pauseListeners]) listener(paused);
   };
-  pauseButton.addEventListener("click", (e) => {
-    e.stopPropagation(); // pausing must never count as "tap the card to continue"
+  pauseButton.addEventListener("click", () => {
     userPaused = !userPaused;
     syncPause();
   });
@@ -600,19 +634,20 @@ async function runDemo(interactive: boolean) {
 
   const pausableSleep = (ms: number) =>
     new Promise<void>((resolve, reject) => {
-      if (signal.aborted) return reject(abortError());
+      const s = stepSignal;
+      if (s.aborted) return reject(abortError());
       const onAbort = () => {
         cancel();
         reject(abortError());
       };
       const cancel = pausableTimer(ms, () => {
-        signal.removeEventListener("abort", onAbort);
+        s.removeEventListener("abort", onAbort);
         resolve();
       });
-      signal.addEventListener("abort", onAbort, { once: true });
+      s.addEventListener("abort", onAbort, { once: true });
     });
 
-  const bar = buildBar(advance, stop);
+  const bar = buildBar(stop);
 
   cursor.style.transform = `translate(${window.innerWidth / 2}px, ${window.innerHeight * 0.65}px)`;
   if (prefersReducedMotion()) cursor.style.display = "none";
@@ -643,8 +678,6 @@ async function runDemo(interactive: boolean) {
 
   // The button the visitor is asked to click (try-it mode only).
   let waitingFor: Element | null = null;
-  // At the final card, any outside click closes the demo (in both modes).
-  let atFinale = false;
 
   // Draws attention back to the glowing button when the visitor clicks somewhere else.
   const nudge = () => {
@@ -653,37 +686,67 @@ async function runDemo(interactive: boolean) {
     spot.classList.add("is-nudge");
   };
 
-  // Auto-play: any click outside the demo's own controls stops it.
-  // Try-it: the visitor is meant to click, so stray clicks only nudge. Skip and Esc still stop it.
-  const onPointerDown = (e: PointerEvent) => {
-    const t = e.target as Node;
-    if (bar.contains(t) || callout.contains(t)) return;
-    if (!interactive || atFinale) return stop();
-    if (!(waitingFor && e.composedPath().includes(waitingFor))) nudge();
-  };
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") stop();
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      advance();
+  // Input guard. Listening on window in the capture phase runs before anything inside the widget's
+  // shadow DOM, so a blocked click never reaches the widget (e.g. History can't collapse the chat
+  // mid-tour). Let through: the demo's own controls, the button a try-it step asks for, the demo's
+  // own scripted clicks (not isTrusted), and everything once the final card is up.
+  // Auto-play: a click on the page outside the widget still stops the demo, as before.
+  const isOwnControl = (path: EventTarget[]) => path.includes(callout) || path.includes(bar);
+  const isAllowedTarget = (path: EventTarget[]) => waitingFor !== null && path.includes(waitingFor);
+  const onPointerEvent = (e: Event) => {
+    if (!e.isTrusted) return;
+    const path = e.composedPath();
+    if (isOwnControl(path) || isAllowedTarget(path)) return;
+    if (atFinale || (!interactive && !isWidgetEvent(e))) {
+      if (e.type === "pointerdown") stop();
+      return;
     }
+    // Touch: stop it reaching the widget but keep native scrolling; the click that follows is blocked anyway.
+    if (!e.type.startsWith("touch")) e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.type === "pointerdown") nudge();
   };
-  document.addEventListener("pointerdown", onPointerDown, true);
-  document.addEventListener("keydown", onKeyDown, true);
-
-  // Tapping the callout itself (not one of its buttons) also moves on. Uses the event path recorded
-  // at click time, because a button may have re-rendered (e.g. ⏸ → ▶) before the click gets here.
-  callout.addEventListener("click", (e) => {
-    if (!e.composedPath().some((node) => node instanceof HTMLButtonElement)) advance();
-  });
+  const onKey = (e: KeyboardEvent) => {
+    if (e.type === "keydown") {
+      if (e.key === "Escape") return stop();
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        e.stopImmediatePropagation(); // don't move the caret or a slider inside the widget
+        if (e.key === "ArrowRight") advance();
+        else goBack();
+        return;
+      }
+    }
+    // Keyboard inside the widget (Enter / Space on a focused button, typing) is blocked too.
+    // Tab still moves focus, and the button a try-it step asks for still works.
+    if (atFinale || e.key === "Tab" || !isWidgetEvent(e) || isAllowedTarget(e.composedPath())) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+  const POINTER_EVENTS = [
+    "pointerdown",
+    "pointerup",
+    "mousedown",
+    "mouseup",
+    "click",
+    "dblclick",
+    "auxclick",
+    "contextmenu",
+    "touchstart",
+    "touchend",
+  ];
+  const KEY_EVENTS = ["keydown", "keypress", "keyup"];
+  for (const type of POINTER_EVENTS) window.addEventListener(type, onPointerEvent, { capture: true, passive: false });
+  for (const type of KEY_EVENTS) window.addEventListener(type, onKey as EventListener, true);
 
   // A reading pause: the visitor can cut it short (Next) or freeze it (⏸).
   const readWait = (ms: number) =>
     new Promise<void>((resolve, reject) => {
-      if (signal.aborted) return reject(abortError());
+      const s = stepSignal;
+      if (s.aborted) return reject(abortError());
       const done = () => {
         cancel();
-        signal.removeEventListener("abort", onAbort);
+        s.removeEventListener("abort", onAbort);
         if (skipAhead === done) skipAhead = null;
         resolve();
       };
@@ -694,7 +757,7 @@ async function runDemo(interactive: boolean) {
       };
       const cancel = pausableTimer(ms, done);
       skipAhead = done;
-      signal.addEventListener("abort", onAbort, { once: true });
+      s.addEventListener("abort", onAbort, { once: true });
     });
 
   // Typing the sample question; skipping shows the full text at once.
@@ -718,11 +781,12 @@ async function runDemo(interactive: boolean) {
   const hideCallout = () => callout.classList.remove("is-visible");
   // Not pausable: the card is hidden while gliding, so a pause here would leave no ▶ to press.
   // The glide finishes, the next card appears, and the pause holds its reading time instead.
-  const glide = () => sleep(prefersReducedMotion() ? 0 : MOVE_MS, signal);
+  const glide = () => sleep(prefersReducedMotion() ? 0 : MOVE_MS, stepSignal);
 
   // Try-it mode: wait for the visitor to click the real button, press "Show me", or run out of time.
   const waitForVisitor = (target: Element) =>
     new Promise<"visitor" | "showme" | "timeout">((resolve, reject) => {
+      const s = stepSignal;
       const showMe = callout.querySelector<HTMLButtonElement>(".ac-showme")!;
       const finish = (how: "visitor" | "showme" | "timeout") => {
         cleanup();
@@ -742,20 +806,20 @@ async function runDemo(interactive: boolean) {
         cancelTimer();
         document.removeEventListener("click", onClick, true);
         showMe.removeEventListener("click", onShowMe);
-        signal.removeEventListener("abort", onAbort);
+        s.removeEventListener("abort", onAbort);
         callout.classList.remove("is-waiting");
         waitingFor = null;
         if (skipAhead === onShowMe) skipAhead = null;
       }
 
-      if (signal.aborted) return reject(abortError());
+      if (s.aborted) return reject(abortError());
       waitingFor = target;
-      skipAhead = onShowMe; // Next on a try-it step means "show me"
+      skipAhead = onShowMe; // Next (→ key) on a try-it step means "show me"
       callout.classList.add("is-waiting");
       applyCallout(); // the hint makes the callout taller
       document.addEventListener("click", onClick, true);
       showMe.addEventListener("click", onShowMe);
-      signal.addEventListener("abort", onAbort, { once: true });
+      s.addEventListener("abort", onAbort, { once: true });
     });
 
   // After a real click: wait for the widget to finish animating, then grow the spotlight to show the result.
@@ -763,10 +827,10 @@ async function runDemo(interactive: boolean) {
     hideCallout();
     cursor.classList.remove("is-visible");
     if (reveal.area === "screen") {
-      await settle(byLabel(WIDGET_SELECTORS.exitFullscreen), signal);
+      await settle(byLabel(WIDGET_SELECTORS.exitFullscreen), stepSignal);
       focusOn({ rect: screenRect, mode: "clear", placement: reveal.placement });
     } else {
-      await settle(findChatWindow, signal);
+      await settle(findChatWindow, stepSignal);
       const found = findChatWindow() !== null;
       focusOn({
         rect: () => findChatWindow()?.getBoundingClientRect() ?? null,
@@ -779,78 +843,114 @@ async function runDemo(interactive: boolean) {
     await readWait(reveal.hold ?? readingTime(reveal));
   };
 
-  try {
-    const playable = SCENES.filter((s) => !s.skip?.());
-    // Count only scenes that can play: no target, a target that appears later, or one on screen now.
-    const countRemaining = (from: number) =>
-      playable.slice(from).filter((s) => !s.target || s.waitForTarget || s.target() !== null).length;
-    let total = countRemaining(0);
-    let shown = 0;
+  // Back lands only on cards worth returning to: not the demo's own "go back" clicks
+  // (close history, leave fullscreen), and not scenes that no longer apply (opening an open chat).
+  const isLanding = (i: number) => !SCENES[i].autoPress && !SCENES[i].skip?.();
+  // Once a scene's real click has happened, its result is on screen; Back then replays that scene.
+  let pressed = false;
+  const canGoBack = (i: number) => (pressed && isLanding(i)) || SCENES.slice(0, i).some((_, j) => isLanding(j));
+  const updateBack = (i: number) => {
+    prevButton.disabled = !canGoBack(i);
+  };
 
-    for (const [index, scene] of playable.entries()) {
-      // The typed text belongs to the message-box scene only.
-      document.getElementById(IDS.ghost)?.remove();
+  // Plays one scene: spotlight, card, optional typing / click, optional reveal, reading time.
+  const playScene = async (index: number) => {
+    const scene = SCENES[index];
+    if (scene.skip?.()) return;
 
-      const target = scene.target ? await resolveTarget(scene.target, signal, scene.waitForTarget ? 2000 : 0) : null;
-      if (scene.target && !target) continue;
-      shown++;
-      total = shown - 1 + countRemaining(index);
-      setProgress(bar, shown - 1, total);
+    // The typed text belongs to the message-box scene only.
+    document.getElementById(IDS.ghost)?.remove();
 
-      // 1. Glide the spotlight and cursor to the target while the old callout fades out.
-      hideCallout();
-      const rect = target?.getBoundingClientRect() ?? null;
-      focusOn({
-        rect: () => target?.getBoundingClientRect() ?? null,
-        mode: target ? "target" : "dim",
-        placement: scene.placement,
-      });
-      if (rect) {
-        cursor.classList.add("is-visible");
-        moveCursor(cursor, rect);
+    const target = scene.target ? await resolveTarget(scene.target, stepSignal, scene.waitForTarget ? 2000 : 0) : null;
+    if (scene.target && !target) return;
+    setProgress(bar, index, SCENES.length);
+    updateBack(index);
+
+    // 1. Glide the spotlight and cursor to the target while the old callout fades out.
+    hideCallout();
+    const rect = target?.getBoundingClientRect() ?? null;
+    focusOn({
+      rect: () => target?.getBoundingClientRect() ?? null,
+      mode: target ? "target" : "dim",
+      placement: scene.placement,
+    });
+    if (rect) {
+      cursor.classList.add("is-visible");
+      moveCursor(cursor, rect);
+    } else {
+      cursor.classList.remove("is-visible");
+    }
+    await glide();
+
+    // 2. Explain it right beside the target.
+    showCallout(scene);
+    if (target && scene.click) ripple(cursor);
+    if (target && scene.type) await typeInto(target, scene.type);
+
+    // 3. Real click. Auto-play does it after a short pause; try-it mode lets the visitor do it.
+    if (target && scene.press) {
+      const visitorTurn = interactive && !scene.autoPress;
+      let visitorClicked = false;
+      if (visitorTurn) {
+        cursor.classList.remove("is-visible"); // step aside so it's clear the visitor should click
+        visitorClicked = (await waitForVisitor(target)) === "visitor";
       }
-      await glide();
 
-      // 2. Explain it right beside the target. The first callout also says how to go faster.
-      callout.classList.toggle("show-tip", shown === 1);
-      showCallout(scene);
-      if (target && scene.click) ripple(cursor);
-      if (target && scene.type) await typeInto(target, scene.type);
-
-      // 3. Real click. Auto-play does it after a short pause; try-it mode lets the visitor do it.
-      if (target && scene.press) {
-        const visitorTurn = interactive && !scene.autoPress;
-        let visitorClicked = false;
+      if (!visitorClicked) {
         if (visitorTurn) {
-          cursor.classList.remove("is-visible"); // step aside so it's clear the visitor should click
-          visitorClicked = (await waitForVisitor(target)) === "visitor";
+          cursor.classList.add("is-visible");
+          moveCursor(cursor, target.getBoundingClientRect());
+          await glide();
+        } else if (interactive) {
+          // Tour "go back" steps: a short pause, then the demo clicks.
+          await readWait(PRE_CLICK_MS);
+        } else {
+          // Long enough to read what is about to happen.
+          await readWait(Math.max(PRE_CLICK_MS, readingTime(scene) - 800));
         }
-
-        if (!visitorClicked) {
-          if (visitorTurn) {
-            cursor.classList.add("is-visible");
-            moveCursor(cursor, target.getBoundingClientRect());
-            await glide();
-          } else if (interactive) {
-            // Tour "go back" steps: a short pause, then the demo clicks.
-            await readWait(PRE_CLICK_MS);
-          } else {
-            // Long enough to read what is about to happen.
-            await readWait(Math.max(PRE_CLICK_MS, readingTime(scene) - 800));
-          }
-          ripple(cursor);
-          await sleep(180, signal);
-          (target as HTMLElement).click();
-        }
+        ripple(cursor);
+        await sleep(180, stepSignal);
+        (target as HTMLElement).click();
       }
+      pressed = true;
+      updateBack(index);
+    }
 
-      await scene.after?.(signal);
-      if (scene.reveal) await showReveal(scene.reveal);
-      await readWait(scene.hold ?? readingTime(scene));
+    await scene.after?.(stepSignal);
+    if (scene.reveal) await showReveal(scene.reveal);
+    await readWait(scene.hold ?? readingTime(scene));
+  };
+
+  // Puts the widget back to its plain chat view, then picks the card Back should land on.
+  const backTarget = async (from: number) => {
+    hideCallout();
+    document.getElementById(IDS.ghost)?.remove();
+    restoreWidget();
+    await settle(findChatWindow, signal);
+    if (pressed && isLanding(from)) return from;
+    for (let j = from - 1; j >= 0; j--) if (isLanding(j)) return j;
+    return 0;
+  };
+
+  try {
+    let index = 0;
+    while (index < SCENES.length) {
+      newStep();
+      pressed = false;
+      try {
+        await playScene(index);
+        index++;
+      } catch (err) {
+        if (!wantBack || signal.aborted) throw err;
+        wantBack = false;
+        index = await backTarget(index);
+      }
     }
 
     // Finale: point at the message box and hand over to the visitor.
     // The progress bar and Skip are no longer needed; the card has its own way out.
+    newStep();
+    scenesDone = true;
     bar.classList.remove("is-visible");
     hideCallout();
     document.getElementById(IDS.ghost)?.remove();
@@ -872,8 +972,8 @@ async function runDemo(interactive: boolean) {
     if (!(err instanceof DOMException && err.name === "AbortError")) console.error("[agent-demo]", err);
   } finally {
     window.removeEventListener("resize", relayout);
-    document.removeEventListener("pointerdown", onPointerDown, true);
-    document.removeEventListener("keydown", onKeyDown, true);
+    for (const type of POINTER_EVENTS) window.removeEventListener(type, onPointerEvent, true);
+    for (const type of KEY_EVENTS) window.removeEventListener(type, onKey as EventListener, true);
     document.removeEventListener("visibilitychange", syncPause);
     for (const id of Object.values(IDS)) document.getElementById(id)?.remove();
     restoreWidget();
