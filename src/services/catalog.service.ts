@@ -309,14 +309,37 @@ const mapV2CardToPublicProduct = (card: V2ProductCard): PublicProduct => {
     const allSizes = sizeKey ? card.options[sizeKey] : [];
     const allColors = colorKey ? card.options[colorKey] : [];
 
-    // If variants list is empty or sparse, populate placeholder variants so UI filters display all choices
-    if (variants.length === 0 && (allSizes.length > 0 || allColors.length > 0)) {
+    // Card items carry no attribute map, only a label like "1 inch(24mm) · Pink".
+    // Recover size & colour from the label so the detail modal can render options immediately.
+    variants = variants.map((v) => {
+      if (v.attributes.length > 0 || !v.label) return v;
+      const parts = v.label.split('·').map((p) => p.trim());
+      const size = sizeKey ? parts.find((p) => allSizes.includes(p)) : undefined;
+      const color = colorKey ? parts.find((p) => allColors.includes(p)) : undefined;
+      const attributes = [
+        ...(size ? [{ name: sizeKey!, value: size }] : []),
+        ...(color ? [{ name: colorKey!, value: color }] : []),
+      ];
+      return attributes.length > 0
+        ? { ...v, attributes, option: attributes[0].name, value: attributes[0].value }
+        : v;
+    });
+
+    // The card only returns a few items (rest counted in more_items): add placeholder
+    // variants for the missing size/colour combinations so every choice is shown at once.
+    if (allSizes.length > 0 || allColors.length > 0) {
       const sizes = allSizes.length > 0 ? allSizes : ['Standard'];
       const colors = allColors.length > 0 ? allColors : ['Standard'];
+      const hasCombo = (s: string, c: string) =>
+        variants.some((v) => {
+          const vs = v.attributes.find((a) => a.name === sizeKey)?.value;
+          const vc = v.attributes.find((a) => a.name === colorKey)?.value;
+          return (!sizeKey || vs === s) && (!colorKey || vc === c);
+        });
 
-      variants = [];
       sizes.forEach((s) => {
         colors.forEach((c) => {
+          if (hasCombo(s, c)) return;
           variants.push({
             variantId: `${card.id}-${s}-${c}`,
             sku: `${primarySku}-${s}-${c}`.replace(/\s+/g, '-').toUpperCase(),

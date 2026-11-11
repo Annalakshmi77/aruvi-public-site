@@ -444,24 +444,16 @@ html {
   animation: ad-spot-pulse 1.6s ease-out infinite;
 }
 
-/* Callout: white speech bubble beside the target */
+/* Callout: one white speech bubble, with the robot mascot to its left */
 #agent-demo-callout {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 2147483647;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
   box-sizing: border-box;
-  width: max-content;
-  max-width: min(300px, calc(100vw - 24px));
-  padding: 14px 16px 14px 14px;
-  border-radius: 16px;
-  background: #ffffff;
-  color: #0d382c;
+  width: 300px;
+  max-width: calc(100vw - 160px);
   font-family: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  box-shadow: 0 24px 50px -12px rgba(4, 34, 26, 0.5), 0 0 0 1px rgba(13, 56, 44, 0.06);
   pointer-events: none;
   opacity: 0;
   scale: 0.94;
@@ -471,64 +463,109 @@ html {
 #agent-demo-callout.is-visible {
   opacity: 1;
   scale: 1;
-}
-
-#agent-demo-callout.is-finished {
   pointer-events: auto;
 }
 
-#agent-demo-callout .ac-icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  color: #0d382c;
-  background: linear-gradient(140deg, #f3b14a, #e58a00);
-  box-shadow: 0 6px 16px -4px rgba(229, 138, 0, 0.6);
+#agent-demo-callout .ac-bubble {
+  /* Colours taken from the robot: white shell, glossy black visor, orange lights, pink-orange portal */
+  --ac-dark: #121318;
+  --ac-dark-2: #26272e;
+  --ac-ink: #16171c;
+  --ac-cream: #ffffff;
+  position: relative;
+  padding: 14px 16px 0;
+  border-radius: 16px;
+  color: var(--ac-ink);
+  /* White card with a hairline border glowing from portal orange into pink, then into the dark footer */
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(160deg, #ffb347, #ff6a2c 35%, #ff3d6e 65%, var(--ac-dark) 90%) border-box;
+  box-shadow:
+    0 28px 60px -16px rgba(0, 0, 0, 0.55),
+    0 8px 20px -8px rgba(0, 0, 0, 0.3);
 }
 
-#agent-demo-callout .ac-body {
-  flex: 1;
-  min-width: 0;
+/* Soft portal-coloured haze behind the card, as if the robot's portal lights it */
+#agent-demo-callout .ac-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 10px -6px -6px -14px;
+  z-index: -1;
+  border-radius: 28px;
+  background: radial-gradient(60% 70% at 0% 100%, rgba(255, 106, 44, 0.55), transparent 70%),
+    radial-gradient(50% 60% at 100% 0%, rgba(255, 61, 110, 0.28), transparent 70%);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+/* Tail on the bubble's left edge, vertically centred, pointing at the robot */
+#agent-demo-callout .ac-tail {
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  width: 0;
+  height: 0;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-right: 14px solid #ffffff;
+  transform: translateY(-50%);
+  filter: drop-shadow(-2px 0 1px rgba(255, 106, 44, 0.45));
 }
 
 #agent-demo-callout .ac-title {
-  margin-top: 2px;
-  font-size: 1.02rem;
-  font-weight: 800;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 5px;
+  padding-right: 54px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: var(--ac-ink);
+}
+
+#agent-demo-callout .ac-sparkle {
+  font-size: 13px;
+  color: #ff7a1a;
+  filter: drop-shadow(0 0 4px rgba(255, 122, 26, 0.35));
 }
 
 #agent-demo-callout .ac-text {
-  margin-top: 3px;
-  font-size: 0.86rem;
-  line-height: 1.45;
-  color: rgba(13, 56, 44, 0.7);
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #4b4d55;
 }
 
-#agent-demo-callout.is-visible {
-  pointer-events: auto;
-}
-
-/* Small pause / play button in the card's top-right corner */
+/* Close and pause in the bubble's top-right corner */
+#agent-demo-callout .ac-close,
 #agent-demo-callout .ac-pause {
   position: absolute;
-  top: 9px;
-  right: 9px;
+  top: 10px;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
   border-radius: 9999px;
-  color: rgba(13, 56, 44, 0.65);
-  background: rgba(13, 56, 44, 0.07);
+  background: rgba(18, 19, 24, 0.06);
+  color: rgba(18, 19, 24, 0.5);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: color 0.2s, background 0.2s;
+}
+
+#agent-demo-callout .ac-close {
+  right: 10px;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+}
+
+#agent-demo-callout .ac-pause {
+  right: 37px;
 }
 
 #agent-demo-callout .ac-pause svg {
@@ -536,137 +573,157 @@ html {
   stroke: none;
 }
 
+#agent-demo-callout .ac-close:hover,
 #agent-demo-callout .ac-pause:hover {
-  color: #0d382c;
-  background: rgba(13, 56, 44, 0.14);
+  color: var(--ac-cream);
+  background: var(--ac-dark);
 }
 
+#agent-demo-callout .ac-close:focus-visible,
 #agent-demo-callout .ac-pause:focus-visible {
-  outline: 2px solid #e58a00;
+  outline: 2px solid #ff7a1a;
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
-#agent-demo-callout .ac-title {
-  padding-right: 26px;
-}
-
-/* Paused: the button turns orange and the animations hold still */
+/* Paused: the button turns orange and every animation on the card holds still */
 #agent-demo-callout.is-paused .ac-pause {
-  color: #0d382c;
-  background: linear-gradient(140deg, #f3b14a, #e58a00);
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff6622, #ff4500);
 }
 
-#agent-demo-callout.is-paused .ac-hint,
+#agent-demo-callout.is-paused .ac-hint-dot::after,
+#agent-demo-callout.is-paused .ac-mascot *,
 #agent-demo-spot.is-paused::after {
   animation-play-state: paused;
 }
 
-/* The final card has its own action and closes by itself; no pause there */
+/* The final card closes by itself; no pause there */
 #agent-demo-callout.is-finished .ac-pause {
   display: none;
-}
-
-#agent-demo-callout.is-finished .ac-title {
-  padding-right: 0;
 }
 
 /* Try-it mode: "your turn" hint, only while waiting for the visitor's click */
 #agent-demo-callout .ac-try {
   display: none;
   margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(13, 56, 44, 0.15);
-}
-
-#agent-demo-callout.is-waiting {
-  pointer-events: auto;
 }
 
 #agent-demo-callout.is-waiting .ac-try {
   display: block;
 }
 
+/* "Your turn" chip: a live pulsing dot, the call to action, then the instruction */
 #agent-demo-callout .ac-hint {
-  display: inline-block;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #b86e00;
-  animation: ac-hint-bob 1.6s ease-in-out infinite;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid rgba(255, 106, 44, 0.28);
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(255, 179, 71, 0.16), rgba(255, 61, 110, 0.08));
+  font-size: 11.5px;
+  line-height: 1.2;
 }
 
-/* Step navigation: icon-only Back / Next in the card's bottom-right corner */
+#agent-demo-callout .ac-hint strong {
+  font-weight: 800;
+  background: linear-gradient(90deg, #ff6a2c, #ff3d6e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+#agent-demo-callout .ac-hint-text {
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 106, 44, 0.3);
+  font-weight: 500;
+  color: #4b4d55;
+}
+
+#agent-demo-callout .ac-hint-dot {
+  position: relative;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff6a2c;
+  box-shadow: 0 0 8px rgba(255, 106, 44, 0.8);
+}
+
+#agent-demo-callout .ac-hint-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ff6a2c;
+  animation: ac-hint-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ac-hint-ping {
+  75%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Dark footer band, glossy black like the robot's visor, with Back / Next on the right */
 #agent-demo-callout .ac-nav {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 12px;
+  margin: 12px -16px 0;
+  padding: 8px 10px;
+  border-radius: 0 0 14.5px 14.5px;
+  background:
+    radial-gradient(90% 160% at 0% 100%, rgba(255, 106, 44, 0.16), transparent 60%),
+    linear-gradient(180deg, var(--ac-dark-2), var(--ac-dark));
 }
 
-#agent-demo-callout.is-finished .ac-nav {
-  display: none;
-}
-
-#agent-demo-callout .ac-prev,
-#agent-demo-callout .ac-next,
-#agent-demo-callout .ac-showme {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 34px;
-  padding: 0;
-  border-radius: 9999px;
-  font-family: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.25), background 0.2s, border-color 0.2s,
-    box-shadow 0.2s, color 0.2s, opacity 0.2s;
-}
-
-/* Comfortable 44px tap target around the 34px circle */
-#agent-demo-callout .ac-prev::after,
-#agent-demo-callout .ac-next::after {
+/* Progress line along the top of the footer */
+#agent-demo-callout .ac-nav::before {
   content: "";
   position: absolute;
-  inset: -5px;
-  border-radius: inherit;
+  top: 0;
+  left: 0;
+  width: var(--ac-progress, 0%);
+  height: 2px;
+  background: linear-gradient(90deg, #ffb347, #ff6a2c, #ff3d6e);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(255, 106, 44, 0.7);
+  transition: width 0.5s ease;
 }
 
-#agent-demo-callout .ac-prev svg,
-#agent-demo-callout .ac-next svg,
-#agent-demo-callout .ac-showme svg {
-  transition: transform 0.2s ease;
+#agent-demo-callout .ac-nav button {
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s;
 }
 
-#agent-demo-callout .ac-prev:focus-visible,
-#agent-demo-callout .ac-next:focus-visible,
-#agent-demo-callout .ac-showme:focus-visible {
-  outline: 2px solid #e58a00;
-  outline-offset: 3px;
+#agent-demo-callout .ac-nav button:focus-visible {
+  outline: 2px solid #ff7a1a;
+  outline-offset: 2px;
 }
 
-#agent-demo-callout .ac-prev:active:not(:disabled),
-#agent-demo-callout .ac-next:active,
-#agent-demo-callout .ac-showme:active {
-  transform: scale(0.92);
-}
-
-/* Back: quiet outline */
 #agent-demo-callout .ac-prev {
-  width: 34px;
-  border: 1px solid rgba(13, 56, 44, 0.14);
-  color: #0d382c;
-  background: #ffffff;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 #agent-demo-callout .ac-prev:hover:not(:disabled) {
-  border-color: rgba(13, 56, 44, 0.28);
-  background: rgba(13, 56, 44, 0.05);
-}
-
-#agent-demo-callout .ac-prev:hover:not(:disabled) svg {
-  transform: translateX(-2px);
+  color: var(--ac-cream);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 #agent-demo-callout .ac-prev:disabled {
@@ -674,55 +731,218 @@ html {
   cursor: default;
 }
 
-/* Next and Show me: solid brand green, the main action */
 #agent-demo-callout .ac-next,
-#agent-demo-callout .ac-showme {
+#agent-demo-callout .ac-showme,
+#agent-demo-callout .ac-start {
+  padding: 6px 15px;
   border: none;
+  font-size: 12px;
+  font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(160deg, #1a5a47, #0d382c);
-  box-shadow: 0 6px 14px -6px rgba(13, 56, 44, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-#agent-demo-callout .ac-next {
-  width: 34px;
+  background: linear-gradient(135deg, #ff6622, #ff4500);
+  box-shadow: 0 4px 14px rgba(255, 87, 34, 0.45);
 }
 
 #agent-demo-callout .ac-next:hover,
-#agent-demo-callout .ac-showme:hover {
-  box-shadow: 0 8px 18px -6px rgba(13, 56, 44, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+#agent-demo-callout .ac-showme:hover,
+#agent-demo-callout .ac-start:hover {
+  background: linear-gradient(135deg, #ff7433, #ff5010);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(255, 87, 34, 0.65);
 }
 
-#agent-demo-callout .ac-next:hover svg,
-#agent-demo-callout .ac-showme:hover svg {
-  transform: translateX(2px);
-}
-
-/* On a try-it step, "Show me" replaces Next so the button says what it will do */
-#agent-demo-callout .ac-showme {
-  display: none;
-  gap: 6px;
-  padding: 0 14px 0 16px;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-#agent-demo-callout.is-waiting .ac-showme {
-  display: inline-flex;
-}
-
-#agent-demo-callout.is-waiting .ac-next {
+/* On a try-it step "Show me" replaces Next; on the final card "Start Chatting" replaces both */
+#agent-demo-callout .ac-showme,
+#agent-demo-callout .ac-start,
+#agent-demo-callout.is-waiting .ac-next,
+#agent-demo-callout.is-finished .ac-prev,
+#agent-demo-callout.is-finished .ac-next,
+#agent-demo-callout.is-finished .ac-showme {
   display: none;
 }
 
-@keyframes ac-hint-bob {
+#agent-demo-callout.is-waiting .ac-showme,
+#agent-demo-callout.is-finished .ac-start {
+  display: inline-block;
+}
 
-  0%,
-  100% {
-    transform: translateY(0);
+/* ---------- Robot mascot: floating on a glowing portal ---------- */
+/* Vertically centred on the card, level with the tail */
+#agent-demo-callout .ac-mascot {
+  position: absolute;
+  top: 50%;
+  left: -146px;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 124px;
+  height: 140px;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#agent-demo-callout .ac-mascot-float {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  animation: ac-levitate 3.2s ease-in-out infinite alternate;
+}
+
+#agent-demo-callout .ac-mascot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 20px rgba(255, 138, 43, 0.5));
+  transition: transform 0.3s;
+}
+
+/* Warm glow behind the robot */
+#agent-demo-callout .ac-mascot-glow {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  z-index: -1;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 106, 44, 0.55), rgba(255, 61, 110, 0.28) 45%, transparent 70%);
+  filter: blur(14px);
+  transform: translate(-50%);
+  pointer-events: none;
+}
+
+/* Portal under the robot: glowing ring, light column and rising sparks */
+#agent-demo-callout .ac-portal {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  z-index: 1;
+  width: 152px;
+  height: 54px;
+  transform: translate(-50%);
+  pointer-events: none;
+}
+
+#agent-demo-callout .ac-portal-rings {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+#agent-demo-callout .ac-portal-ring {
+  fill: rgba(255, 106, 44, 0.15);
+  stroke: #ffb347;
+  stroke-width: 1.8px;
+  filter: drop-shadow(0 0 10px rgba(255, 179, 71, 0.9));
+}
+
+#agent-demo-callout .ac-portal-beam {
+  position: absolute;
+  bottom: 15px;
+  left: 18%;
+  width: 64%;
+  height: 60px;
+  background: linear-gradient(transparent, rgba(255, 106, 44, 0.25), rgba(255, 138, 43, 0.5));
+  filter: blur(8px);
+  animation: ac-beam-flicker 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+#agent-demo-callout .ac-spark {
+  position: absolute;
+  bottom: 16px;
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px #ff8a2b, 0 0 12px #ff3d6e;
+  opacity: 0;
+  animation: ac-ember-rise 2.4s ease-out infinite;
+}
+
+#agent-demo-callout .ac-spark.s1 {
+  left: 18%;
+  animation-delay: 0.2s;
+}
+
+#agent-demo-callout .ac-spark.s2 {
+  left: 35%;
+  animation-delay: 0.9s;
+}
+
+#agent-demo-callout .ac-spark.s3 {
+  left: 52%;
+  animation-delay: 1.6s;
+}
+
+#agent-demo-callout .ac-spark.s4 {
+  left: 70%;
+  animation-delay: 0.5s;
+}
+
+#agent-demo-callout .ac-spark.s5 {
+  left: 86%;
+  animation-delay: 1.2s;
+}
+
+@keyframes ac-levitate {
+  0% {
+    transform: translateY(0) rotate(0);
   }
 
   50% {
-    transform: translateY(-2px);
+    transform: translateY(-8px) rotate(2deg);
+  }
+
+  100% {
+    transform: translateY(-14px) rotate(-1.5deg);
+  }
+}
+
+@keyframes ac-beam-flicker {
+  0% {
+    opacity: 0.7;
+    transform: scaleX(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleX(1.05);
+  }
+}
+
+@keyframes ac-ember-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-16px) scale(1.3);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-52px) scale(0.2);
+  }
+}
+
+/* Phones: the card can use the full width, and the robot moves below it */
+@media (max-width: 640px) {
+  #agent-demo-callout {
+    max-width: calc(100vw - 24px);
+  }
+
+  #agent-demo-callout .ac-mascot {
+    top: auto;
+    bottom: -108px;
+    left: 10px;
+    transform: none;
+  }
+
+  #agent-demo-callout .ac-tail {
+    display: none;
   }
 }
 
@@ -741,81 +961,6 @@ html {
   40% {
     transform: scale(1.18);
   }
-}
-
-#agent-demo-callout .ac-actions {
-  display: none;
-  align-items: center;
-  justify-content: flex-end;
-  width: 100%;
-  gap: 14px;
-  margin-top: 12px;
-}
-
-#agent-demo-callout.is-finished .ac-actions {
-  display: flex;
-}
-
-#agent-demo-callout .ac-start {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 9999px;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #0d382c;
-  background: linear-gradient(140deg, #f3b14a, #e58a00);
-  box-shadow: 0 8px 20px -6px rgba(229, 138, 0, 0.7);
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.2s;
-}
-
-#agent-demo-callout .ac-start:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px -6px rgba(229, 138, 0, 0.85);
-}
-
-#agent-demo-callout .ac-start:focus-visible {
-  outline: 2px solid #e58a00;
-  outline-offset: 2px;
-}
-
-/* Arrow: a rotated square on the side facing the target */
-#agent-demo-callout .ac-arrow {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  background: #ffffff;
-  transform: rotate(45deg);
-  border-radius: 3px;
-}
-
-#agent-demo-callout[data-side="none"] .ac-arrow {
-  display: none;
-}
-
-#agent-demo-callout[data-side="top"] .ac-arrow {
-  bottom: -6px;
-  left: calc(var(--arrow) - 7px);
-}
-
-#agent-demo-callout[data-side="bottom"] .ac-arrow {
-  top: -6px;
-  left: calc(var(--arrow) - 7px);
-}
-
-#agent-demo-callout[data-side="left"] .ac-arrow {
-  right: -6px;
-  top: calc(var(--arrow) - 7px);
-}
-
-#agent-demo-callout[data-side="right"] .ac-arrow {
-  left: -6px;
-  top: calc(var(--arrow) - 7px);
 }
 
 /* Fake cursor: the arrow tip sits on the translate() point */
@@ -878,102 +1023,6 @@ html {
   animation: ad-blink 1s steps(1) infinite;
 }
 
-/* Control bar: progress + skip, out of the way at the bottom-left */
-#agent-demo-bar {
-  position: fixed;
-  left: 20px;
-  bottom: 20px;
-  z-index: 2147483647;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 7px 7px 14px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 12px 30px -10px rgba(4, 34, 26, 0.5);
-  color: #0d382c;
-  font-family: "Space Mono", ui-monospace, monospace;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
-
-#agent-demo-bar.is-visible {
-  opacity: 1;
-  transform: none;
-}
-
-#agent-demo-bar .ab-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: #e58a00;
-  animation: ad-dot 1.6s ease-out infinite;
-}
-
-#agent-demo-bar .ab-track {
-  width: 90px;
-  height: 4px;
-  border-radius: 9999px;
-  overflow: hidden;
-  background: rgba(13, 56, 44, 0.1);
-}
-
-#agent-demo-bar .ab-track span {
-  display: block;
-  width: 0;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #f3b14a, #e58a00);
-  transition: width 0.6s ease;
-}
-
-#agent-demo-bar .ab-skip {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 9999px;
-  font-family: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  color: #0d382c;
-  background: rgba(13, 56, 44, 0.08);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-#agent-demo-bar .ab-skip:hover {
-  background: rgba(13, 56, 44, 0.15);
-}
-
-#agent-demo-bar .ab-skip:focus-visible {
-  outline: 2px solid #e58a00;
-  outline-offset: 2px;
-}
-
-/* On phones the chat fills the bottom of the screen, so the bar moves to the top */
-@media (max-width: 640px) {
-  #agent-demo-bar {
-    left: 50%;
-    top: 12px;
-    bottom: auto;
-    transform: translate(-50%, -12px);
-  }
-
-  #agent-demo-bar.is-visible {
-    transform: translate(-50%, 0);
-  }
-
-  #agent-demo-bar .ab-track {
-    width: 60px;
-  }
-}
-
 @keyframes ad-spot-pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.7);
@@ -1002,32 +1051,19 @@ html {
   }
 }
 
-@keyframes ad-dot {
-  0% {
-    box-shadow: 0 0 0 0 rgba(229, 138, 0, 0.55);
-  }
-
-  100% {
-    box-shadow: 0 0 0 8px rgba(229, 138, 0, 0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
 
   #agent-demo-spot,
   #agent-demo-callout,
   #agent-demo-cursor,
-  #agent-demo-bar,
-  #agent-demo-bar .ab-track span,
-  #agent-demo-callout .ac-nav button,
-  #agent-demo-callout .ac-nav svg {
+  #agent-demo-callout .ac-nav button {
     transition: none;
   }
 
   #agent-demo-spot.has-target::after,
-  #agent-demo-bar .ab-dot,
   #agent-demo-ghost::after,
-  #agent-demo-callout .ac-hint,
+  #agent-demo-callout .ac-hint-dot::after,
+  #agent-demo-callout .ac-mascot *,
   #agent-demo-spot.is-nudge::before {
     animation: none;
   }

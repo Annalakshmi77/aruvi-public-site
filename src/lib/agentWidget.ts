@@ -18,6 +18,8 @@ export const WIDGET_SELECTORS = {
   fullscreen: "[aria-label='Fullscreen']",
   closeHistory: "[aria-label='Close history']",
   exitFullscreen: "[aria-label='Exit fullscreen']",
+  agentReply: ".sa-msg-assistant",
+  typing: ".sa-widget-typing",
 };
 
 const RING_ID = "agent-tour-ring";
@@ -43,6 +45,70 @@ export function isWidgetEvent(e: Event): boolean {
 export function queryWidget(selector: string): Element | null {
   const found = widgetRoot()?.querySelectorAll(selector) ?? [];
   return Array.from(found).find(isVisible) ?? null;
+}
+
+// The smallest box holding both controls, e.g. the two voice buttons side by side.
+export function findCommonParent(a: Element | null, b: Element | null): Element | null {
+  if (!a || !b) return a ?? b;
+  let node: Element | null = a;
+  while (node && !node.contains(b)) node = node.parentElement;
+  return node;
+}
+
+export function countAgentReplies(): number {
+  return widgetRoot()?.querySelectorAll(WIDGET_SELECTORS.agentReply).length ?? 0;
+}
+
+export function findLatestReply(): Element | null {
+  const replies = widgetRoot()?.querySelectorAll(WIDGET_SELECTORS.agentReply) ?? [];
+  const last = replies[replies.length - 1] ?? null;
+  return isVisible(last) ? last : null;
+}
+
+// Puts text into the real message box. The widget's input is a React-controlled textarea, so the
+// value goes through the native setter and an input event, the same way typing would.
+export function fillMessageBox(text: string): boolean {
+  const input = queryWidget(WIDGET_SELECTORS.messageBox) as HTMLTextAreaElement | HTMLInputElement | null;
+  if (!input) return false;
+  const proto = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, "value")?.set?.call(input, text);
+  input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  return true;
+}
+
+// Resolves once a new agent reply has arrived and stopped streaming, or null after the timeout.
+export function waitForReply(previousCount: number, signal: AbortSignal, timeoutMs = 25000): Promise<Element | null> {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    let lastText = "";
+    let stableSince = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("Demo stopped", "AbortError"));
+    };
+    if (signal.aborted) return onAbort();
+    signal.addEventListener("abort", onAbort, { once: true });
+    const finish = (reply: Element | null) => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(reply);
+    };
+    const check = () => {
+      const reply = countAgentReplies() > previousCount ? findLatestReply() : null;
+      const text = reply?.textContent?.trim() ?? "";
+      if (reply && text && !queryWidget(WIDGET_SELECTORS.typing)) {
+        if (text !== lastText) {
+          lastText = text;
+          stableSince = Date.now();
+        } else if (Date.now() - stableSince > 900) {
+          return finish(reply);
+        }
+      }
+      if (Date.now() - started > timeoutMs) return finish(reply);
+      timer = setTimeout(check, 200);
+    };
+    check();
+  });
 }
 
 export function findAgentLauncher(): Element | null {
@@ -111,6 +177,14 @@ export async function openChat(): Promise<boolean> {
   const ready = await waitForChatWindow();
   await new Promise((r) => setTimeout(r, 400));
   return ready !== null;
+}
+
+// Closes the chat window and waits until it has left the screen.
+export async function closeChat(): Promise<void> {
+  window.Perfox?.("close");
+  const started = Date.now();
+  while (isChatOpen() && Date.now() - started < 2000) await new Promise((r) => setTimeout(r, 120));
+  await new Promise((r) => setTimeout(r, 250));
 }
 
 // Glowing ring drawn over a highlighted element. Page CSS can't reach inside the

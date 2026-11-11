@@ -1,19 +1,23 @@
 import {
   WIDGET_SELECTORS,
   claimGuide,
+  closeChat,
+  countAgentReplies,
+  fillMessageBox,
   findAgentLauncher,
   findChatWindow,
+  findCommonParent,
   focusMessageBox,
   isChatOpen,
+  isVisible,
   isWidgetEvent,
   openChat,
   queryWidget,
   releaseGuide,
+  waitForReply,
   waitForWidgetLauncher,
 } from "@/lib/agentWidget";
-import { ARROW_RIGHT, CHEVRON_LEFT, CHEVRON_RIGHT, ICONS, svg, type IconName } from "@/lib/agentIcons";
-
-const SAMPLE_QUESTION = "What are the widths available in red tape?";
+import { svg } from "@/lib/agentIcons";
 
 // Created in this order so later layers sit on top (all share the maximum z-index).
 const IDS = {
@@ -21,7 +25,6 @@ const IDS = {
   ghost: "agent-demo-ghost",
   callout: "agent-demo-callout",
   cursor: "agent-demo-cursor",
-  bar: "agent-demo-bar",
 };
 
 const MOVE_MS = 800; // cursor and spotlight glide
@@ -39,7 +42,6 @@ function readingTime(content: CalloutContent): number {
 type Placement = "top" | "bottom" | "left" | "right";
 
 interface CalloutContent {
-  icon: IconName;
   title: string;
   text: string;
 }
@@ -61,6 +63,7 @@ interface Scene extends CalloutContent {
   autoPress?: boolean; // in the Tour too, click it for the visitor (simple "go back" steps)
   waitForTarget?: boolean; // target only appears after the previous scene's click
   skip?: () => boolean;
+  before?: (signal: AbortSignal) => Promise<void>; // set the page up first, e.g. scroll to a section
   after?: (signal: AbortSignal) => Promise<void>;
   reveal?: Reveal;
   hold?: number; // ms to stay after this scene; defaults to the time needed to read it
@@ -68,16 +71,103 @@ interface Scene extends CalloutContent {
 
 const byLabel = (selector: string) => () => queryWidget(selector);
 
+// One real question to the agent, kept per run so Back never sends a question twice.
+interface Exchange {
+  sent: boolean;
+  repliesBefore: number;
+  reply: Element | null;
+}
+
+const newExchange = (): Exchange => ({ sent: false, repliesBefore: 0, reply: null });
+const exchanges = [newExchange(), newExchange()];
+
+interface AskScript {
+  question: string;
+  ask: CalloutContent;
+  answer: CalloutContent;
+  proof: CalloutContent & { find: () => Element | null };
+  back: CalloutContent;
+}
+
+// Ask → send → wait for the reply → show it → show the same facts on the page → back to the chat.
+function askAndProve(ex: Exchange, script: AskScript): Scene[] {
+  return [
+    {
+      ...script.ask,
+      target: byLabel(WIDGET_SELECTORS.messageBox),
+      placement: "top",
+      click: true,
+      type: script.question,
+      skip: () => ex.sent,
+      after: async () => {
+        ex.repliesBefore = countAgentReplies();
+        fillMessageBox(script.question);
+      },
+      hold: 1200,
+    },
+    {
+      title: "Send it",
+      text: "The question goes to the assistant, for real.",
+      target: byLabel(WIDGET_SELECTORS.send),
+      placement: "top",
+      press: true,
+      skip: () => ex.sent,
+      after: async () => {
+        ex.sent = true;
+      },
+      hold: 0,
+    },
+    {
+      title: "Finding the answer",
+      text: "It understands the question and looks it up in the site's product information.",
+      target: findChatWindow,
+      placement: "left",
+      skip: () => ex.reply !== null,
+      after: async (signal) => {
+        ex.reply = await waitForReply(ex.repliesBefore, signal);
+      },
+      hold: 0,
+    },
+    {
+      ...script.answer,
+      target: () => (isVisible(ex.reply) ? ex.reply : null),
+      placement: "left",
+    },
+    {
+      title: script.proof.title,
+      text: script.proof.text,
+      before: async (signal) => {
+        await closeChat();
+        script.proof.find()?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" });
+        await settle(script.proof.find, signal, 2000);
+      },
+      target: script.proof.find,
+      placement: "bottom",
+      hold: 4800,
+    },
+    {
+      ...script.back,
+      before: async (signal) => {
+        await openChat();
+        throwIfAborted(signal);
+      },
+      target: findChatWindow,
+      placement: "left",
+    },
+  ];
+}
+
+const findWidthsList = () => document.querySelector('[data-tour="widths-list"]');
+const findCustomJobs = () => document.querySelector('[data-tour="custom-jobs"]');
+
 const SCENES: Scene[] = [
   {
-    icon: "bot",
     title: "Meet Peacock Assist",
-    text: "Your AI tape expert. Here's a quick look at what it can do.",
+    text: "An AI assistant that answers from this website's own content: products, widths, colours, printing and prices.",
   },
   {
-    icon: "message",
     title: "Open the chat",
-    text: "Tap this bubble any time to talk to our assistant.",
+    text: "Tap this bubble any time, on any page, to ask the assistant.",
     target: findAgentLauncher,
     placement: "left",
     press: true,
@@ -87,78 +177,57 @@ const SCENES: Scene[] = [
       throwIfAborted(signal);
     },
     reveal: {
-      icon: "bot",
       title: "Here's your assistant",
-      text: "Everything happens right here in this window.",
+      text: "Ask in plain words, the way you'd ask a salesperson.",
       area: "chat",
       placement: "left",
     },
     hold: 0,
   },
+  ...askAndProve(exchanges[0], {
+    question: "What are the widths available?",
+    ask: { title: "Ask a question", text: "No menus or keywords. Just type what you want to know." },
+    answer: { title: "Here's the answer", text: "Every width we offer, answered in seconds." },
+    proof: {
+      title: "It's right here on the site",
+      text: "The same widths the assistant just gave, straight from this page. It answers from the site's own content.",
+      find: findWidthsList,
+    },
+    back: { title: "Now something more specific", text: "Let's ask about a custom printed tape." },
+  }),
+  ...askAndProve(exchanges[1], {
+    question: "6 inch multicolor printed tape - special colors",
+    ask: { title: "A detailed question", text: "Size, printing and colour in one go. It understands all three." },
+    answer: { title: "Here's the answer", text: "Printing and colour options for that exact tape, in one reply." },
+    proof: {
+      title: "Also right here on the site",
+      text: "Multi-colour printing and the special colours (Pink, Grey, Violet, Green), straight from the pricing section.",
+      find: findCustomJobs,
+    },
+    back: {
+      title: "Back to the chat",
+      text: "No scrolling or searching. Customers just ask, and the assistant finds it on the site.",
+    },
+  }),
   {
-    icon: "message",
-    title: "Ask your question",
-    text: "Widths, printing, prices, delivery — just type it here.",
-    target: byLabel(WIDGET_SELECTORS.messageBox),
-    placement: "top",
-    click: true,
-    type: SAMPLE_QUESTION,
-    hold: 1600,
-  },
-  {
-    icon: "paperclip",
     title: "Share your logo",
     text: "Attach artwork and get help planning a branded tape.",
     target: byLabel(WIDGET_SELECTORS.attach),
     placement: "top",
   },
   {
-    icon: "mic",
-    title: "Send a voice note",
-    text: "Prefer talking? Record a quick message instead.",
-    target: byLabel(WIDGET_SELECTORS.voiceNote),
+    title: "Prefer to talk?",
+    text: "Send a voice note, or start a live voice conversation with the assistant.",
+    target: () => findCommonParent(queryWidget(WIDGET_SELECTORS.voiceNote), queryWidget(WIDGET_SELECTORS.voiceMode)),
     placement: "top",
   },
   {
-    icon: "wave",
-    title: "Talk live",
-    text: "Start a voice conversation with the agent.",
-    target: byLabel(WIDGET_SELECTORS.voiceMode),
-    placement: "top",
-  },
-  {
-    icon: "send",
-    title: "Hit send",
-    text: "Answers arrive in seconds.",
-    target: byLabel(WIDGET_SELECTORS.send),
-    placement: "top",
-    click: true,
-  },
-  {
-    icon: "plus",
-    title: "Start a new chat",
-    text: "Begin fresh whenever you switch topics.",
-    target: byLabel(WIDGET_SELECTORS.newChat),
-    placement: "bottom",
-    press: true,
-    reveal: {
-      icon: "message",
-      title: "A fresh chat",
-      text: "A clean conversation, ready for your next question.",
-      area: "chat",
-      placement: "left",
-    },
-    hold: 0,
-  },
-  {
-    icon: "history",
     title: "Open your history",
     text: "Every earlier conversation is saved here.",
     target: byLabel(WIDGET_SELECTORS.history),
     placement: "bottom",
     press: true,
     reveal: {
-      icon: "history",
       title: "All your past chats",
       text: "Tap any one to pick up right where you left off.",
       area: "chat",
@@ -167,7 +236,6 @@ const SCENES: Scene[] = [
     hold: 0,
   },
   {
-    icon: "close",
     title: "Back to the chat",
     text: "Close history to return to your conversation.",
     target: byLabel(WIDGET_SELECTORS.closeHistory),
@@ -178,43 +246,14 @@ const SCENES: Scene[] = [
     hold: 1400,
   },
   {
-    icon: "expand",
-    title: "Go fullscreen",
-    text: "Expand the chat for a bigger view.",
-    target: byLabel(WIDGET_SELECTORS.fullscreen),
+    title: "New chat & fullscreen",
+    text: "Start fresh when you switch topics, or expand the chat for a bigger view.",
+    target: () => findCommonParent(queryWidget(WIDGET_SELECTORS.newChat), queryWidget(WIDGET_SELECTORS.fullscreen)),
     placement: "bottom",
-    press: true,
-    reveal: {
-      icon: "expand",
-      title: "A bigger view",
-      text: "Great for longer conversations and comparing options.",
-      area: "screen",
-      placement: "top",
-    },
-    hold: 0,
-  },
-  {
-    icon: "shrink",
-    title: "Shrink it back",
-    text: "Return to the compact chat whenever you like.",
-    target: byLabel(WIDGET_SELECTORS.exitFullscreen),
-    autoPress: true,
-    placement: "bottom",
-    waitForTarget: true,
-    press: true,
-    reveal: {
-      icon: "shrink",
-      title: "Compact again",
-      text: "The chat stays out of your way while you browse.",
-      area: "chat",
-      placement: "left",
-    },
-    hold: 0,
   },
 ];
 
 const FINALE: CalloutContent = {
-  icon: "hand",
   title: "Your turn! 👋",
   text: "Ask your first question — we're here to help.",
 };
@@ -323,70 +362,124 @@ function moveSpot(spot: HTMLElement, rect: DOMRect | null, mode: SpotMode) {
   });
 }
 
-/* ---------- Callout: speech bubble placed beside the target ---------- */
+/* ---------- Callout: one speech bubble, with the robot mascot beside it ---------- */
 
 const PAUSE_SVG = svg('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>', 12);
 const PLAY_SVG = svg('<path d="M7 4.5v15l12-7.5z"/>', 12);
 
-// Back / Next live on the card itself, as icon buttons in its bottom-right corner.
+// Floating robot on a glowing portal, with sparks rising from it. It sits to the left of the card
+// (below it on phones), and its bubble tail points at it, so the card reads as the robot talking.
+const MASCOT_HTML = `<div class="ac-mascot" aria-hidden="true">
+  <div class="ac-portal">
+    <svg viewBox="0 0 140 50" class="ac-portal-rings">
+      <defs>
+        <radialGradient id="ac-portal-disc" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffe6b0" stop-opacity="0.95" />
+          <stop offset="35%" stop-color="#ff8a2b" stop-opacity="0.8" />
+          <stop offset="70%" stop-color="#ff3d6e" stop-opacity="0.4" />
+          <stop offset="100%" stop-color="#ff3d6e" stop-opacity="0" />
+        </radialGradient>
+        <filter id="ac-portal-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <ellipse cx="70" cy="25" rx="46" ry="13" class="ac-portal-ring" filter="url(#ac-portal-glow)" />
+      <ellipse cx="70" cy="25" rx="30" ry="8" fill="url(#ac-portal-disc)" />
+      <ellipse cx="70" cy="25" rx="14" ry="4" fill="#ffffff" opacity="0.9" filter="blur(1px)" />
+    </svg>
+    <div class="ac-portal-beam"></div>
+    <span class="ac-spark s1"></span>
+    <span class="ac-spark s2"></span>
+    <span class="ac-spark s3"></span>
+    <span class="ac-spark s4"></span>
+    <span class="ac-spark s5"></span>
+  </div>
+  <div class="ac-mascot-glow"></div>
+  <div class="ac-mascot-float">
+    <img src="/tour-mascot.png" alt="" class="ac-mascot-img" loading="eager" />
+  </div>
+</div>`;
+
+// Room the mascot takes up outside the card: to its left on wide screens, below it on phones.
+const MASCOT_LEFT = 146;
+const MASCOT_BELOW = 128;
+const isNarrow = () => window.innerWidth <= 640;
+
+// One card: copy on top, Back / Next along its bottom edge.
 // On a try-it step, "Show me" takes Next's place so the button says what it will do.
-function buildCallout(onStartChat: () => void, onBack: () => void, onNext: () => void) {
+function buildCallout(onStartChat: () => void, onBack: () => void, onNext: () => void, onClose: () => void) {
   const callout = el(
     IDS.callout,
-    `<span class="ac-arrow" aria-hidden="true"></span>
-     <button type="button" class="ac-pause" aria-label="Pause demo"></button>
-     <span class="ac-icon" aria-hidden="true"></span>
-     <div class="ac-body">
+    `<div class="ac-bubble">
+       <span class="ac-tail" aria-hidden="true"></span>
+       <button type="button" class="ac-pause" aria-label="Pause demo"></button>
+       <button type="button" class="ac-close" aria-label="Close tour">&times;</button>
        <div class="ac-copy" aria-live="polite">
-         <div class="ac-title"></div>
+         <div class="ac-title">
+           <span class="ac-sparkle" aria-hidden="true">✨</span>
+           <span class="ac-heading"></span>
+         </div>
          <div class="ac-text"></div>
        </div>
        <div class="ac-try">
-         <span class="ac-hint">👆 Your turn — click the glowing button</span>
+         <span class="ac-hint">
+           <span class="ac-hint-dot" aria-hidden="true"></span>
+           <strong>Your turn</strong>
+           <span class="ac-hint-text">Click the glowing button</span>
+         </span>
        </div>
        <div class="ac-nav">
-         <button type="button" class="ac-prev" aria-label="Previous step" title="Previous">${CHEVRON_LEFT}</button>
-         <button type="button" class="ac-showme">Show me ${ARROW_RIGHT}</button>
-         <button type="button" class="ac-next" aria-label="Next step" title="Next">${CHEVRON_RIGHT}</button>
+         <button type="button" class="ac-prev">← Back</button>
+         <button type="button" class="ac-showme">Show me →</button>
+         <button type="button" class="ac-next">Next →</button>
+         <button type="button" class="ac-start">Start Chatting ✨</button>
        </div>
-       <div class="ac-actions">
-         <button type="button" class="ac-start">Start chatting ${ARROW_RIGHT}</button>
-       </div>
-     </div>`,
+     </div>
+     ${MASCOT_HTML}`,
   );
   callout.querySelector<HTMLButtonElement>(".ac-start")!.addEventListener("click", onStartChat);
   callout.querySelector<HTMLButtonElement>(".ac-prev")!.addEventListener("click", onBack);
   callout.querySelector<HTMLButtonElement>(".ac-next")!.addEventListener("click", onNext);
+  callout.querySelector<HTMLButtonElement>(".ac-close")!.addEventListener("click", onClose);
   return callout;
 }
 
 function fillCallout(callout: HTMLElement, content: CalloutContent) {
-  callout.querySelector(".ac-icon")!.innerHTML = svg(ICONS[content.icon], 20);
-  callout.querySelector(".ac-title")!.textContent = content.title;
+  callout.querySelector(".ac-heading")!.textContent = content.title;
   callout.querySelector(".ac-text")!.textContent = content.text;
 }
 
+// Places the card beside the target. The mascot hangs outside the card, so it counts as part of
+// the card's footprint: the card never covers the target and the mascot never leaves the screen.
 function placeCallout(callout: HTMLElement, rect: DOMRect | null, preferred?: Placement) {
   const gap = 18;
-  const margin = 12;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  const margin = 16;
+  // The visible area without the page scrollbar, so the card never slides under it.
+  const vw = document.documentElement.clientWidth || window.innerWidth;
+  const vh = document.documentElement.clientHeight || window.innerHeight;
   const w = callout.offsetWidth;
   const h = callout.offsetHeight;
+  const extraLeft = isNarrow() ? 0 : MASCOT_LEFT;
+  const extraBelow = isNarrow() ? MASCOT_BELOW : 0;
+  const clampX = (x: number) => Math.min(Math.max(x, margin + extraLeft), vw - w - margin);
+  const clampY = (y: number) => Math.min(Math.max(y, margin), vh - h - extraBelow - margin);
 
   if (!rect) {
     // Centred on screen, or pinned near the top when asked (e.g. over the fullscreen chat).
-    callout.dataset.side = "none";
-    const y = preferred === "top" ? margin + 12 : (vh - h) / 2;
-    callout.style.transform = `translate(${(vw - w) / 2}px, ${y}px)`;
+    const y = preferred === "top" ? margin + 12 : (vh - h - extraBelow) / 2;
+    callout.style.transform = `translate(${clampX((vw - w + extraLeft) / 2)}px, ${clampY(y)}px)`;
     return;
   }
 
   const fits: Record<Placement, boolean> = {
-    top: rect.top - gap - h >= margin,
-    bottom: rect.bottom + gap + h <= vh - margin,
-    left: rect.left - gap - w >= margin,
-    right: rect.right + gap + w <= vw - margin,
+    top: rect.top - gap - h - extraBelow >= margin,
+    bottom: rect.bottom + gap + h + extraBelow <= vh - margin,
+    left: rect.left - gap - w - extraLeft >= margin,
+    right: rect.right + gap + extraLeft + w <= vw - margin,
   };
   const order: Placement[] = [preferred ?? "top", "top", "bottom", "left", "right"];
   const side = order.find((s) => fits[s]) ?? "top";
@@ -397,40 +490,12 @@ function placeCallout(callout: HTMLElement, rect: DOMRect | null, preferred?: Pl
   let y: number;
   if (side === "top" || side === "bottom") {
     x = cx - w / 2;
-    y = side === "top" ? rect.top - gap - h : rect.bottom + gap;
+    y = side === "top" ? rect.top - gap - h - extraBelow : rect.bottom + gap;
   } else {
-    x = side === "left" ? rect.left - gap - w : rect.right + gap;
+    x = side === "left" ? rect.left - gap - w : rect.right + gap + extraLeft;
     y = cy - h / 2;
   }
-  x = Math.min(Math.max(x, margin), vw - w - margin);
-  y = Math.min(Math.max(y, margin), vh - h - margin);
-
-  // Point the arrow at the target's centre, even when the bubble was nudged to stay on screen.
-  const arrow =
-    side === "top" || side === "bottom"
-      ? Math.min(Math.max(cx - x, 22), w - 22)
-      : Math.min(Math.max(cy - y, 22), h - 22);
-
-  callout.dataset.side = side;
-  callout.style.setProperty("--arrow", `${arrow}px`);
-  callout.style.transform = `translate(${x}px, ${y}px)`;
-}
-
-/* ---------- Control bar: progress + skip (step navigation is on the card) ---------- */
-
-function buildBar(onSkip: () => void) {
-  const bar = el(
-    IDS.bar,
-    `<span class="ab-dot" aria-hidden="true"></span>
-     <span class="ab-track" aria-hidden="true"><span></span></span>
-     <button type="button" class="ab-skip" aria-label="Skip demo">Skip <span aria-hidden="true">✕</span></button>`,
-  );
-  bar.querySelector<HTMLButtonElement>(".ab-skip")!.addEventListener("click", onSkip);
-  return bar;
-}
-
-function setProgress(bar: HTMLElement, done: number, total: number) {
-  bar.querySelector<HTMLElement>(".ab-track span")!.style.width = `${Math.round((done / total) * 100)}%`;
+  callout.style.transform = `translate(${clampX(x)}px, ${clampY(y)}px)`;
 }
 
 /* ---------- Cursor and typing ---------- */
@@ -532,6 +597,7 @@ export function startAgentGuide() {
 
 async function runDemo(interactive: boolean) {
   if (!claimGuide()) return;
+  for (const ex of exchanges) Object.assign(ex, newExchange());
 
   const controller = new AbortController();
   const { signal } = controller;
@@ -573,8 +639,17 @@ async function runDemo(interactive: boolean) {
     },
     goBack,
     advance,
+    stop,
   );
   const prevButton = callout.querySelector<HTMLButtonElement>(".ac-prev")!;
+  // Progress line along the top of the footer. The demo's own "go back" clicks and skipped scenes
+  // aren't counted; they keep the progress of the step before them.
+  const counted = SCENES.map((s) => !s.autoPress && !s.skip?.());
+  const totalSteps = counted.filter(Boolean).length;
+  const showStep = (index: number) => {
+    const n = Math.max(1, counted.slice(0, index + 1).filter(Boolean).length);
+    callout.style.setProperty("--ac-progress", `${Math.round((n / totalSteps) * 100)}%`);
+  };
   const cursor = el(IDS.cursor, `${CURSOR_SVG}<span class="ad-ripple"></span>`);
 
   // Pausing: the ⏸ button on the card, or the visitor switching to another tab. Every timed wait
@@ -647,14 +722,9 @@ async function runDemo(interactive: boolean) {
       s.addEventListener("abort", onAbort, { once: true });
     });
 
-  const bar = buildBar(stop);
-
   cursor.style.transform = `translate(${window.innerWidth / 2}px, ${window.innerHeight * 0.65}px)`;
   if (prefersReducedMotion()) cursor.style.display = "none";
-  requestAnimationFrame(() => {
-    spot.classList.add("is-visible");
-    bar.classList.add("is-visible");
-  });
+  requestAnimationFrame(() => spot.classList.add("is-visible"));
 
   // What the spotlight and callout are currently attached to. Re-measured on resize.
   interface Focus {
@@ -674,6 +744,8 @@ async function runDemo(interactive: boolean) {
     applyCallout();
   };
   window.addEventListener("resize", relayout);
+  // The site-proof step spotlights part of the page, so it has to follow the visitor's scrolling.
+  window.addEventListener("scroll", relayout, { passive: true });
   focusOn(focus);
 
   // The button the visitor is asked to click (try-it mode only).
@@ -691,7 +763,7 @@ async function runDemo(interactive: boolean) {
   // mid-tour). Let through: the demo's own controls, the button a try-it step asks for, the demo's
   // own scripted clicks (not isTrusted), and everything once the final card is up.
   // Auto-play: a click on the page outside the widget still stops the demo, as before.
-  const isOwnControl = (path: EventTarget[]) => path.includes(callout) || path.includes(bar);
+  const isOwnControl = (path: EventTarget[]) => path.includes(callout);
   const isAllowedTarget = (path: EventTarget[]) => waitingFor !== null && path.includes(waitingFor);
   const onPointerEvent = (e: Event) => {
     if (!e.isTrusted) return;
@@ -860,11 +932,16 @@ async function runDemo(interactive: boolean) {
 
     // The typed text belongs to the message-box scene only.
     document.getElementById(IDS.ghost)?.remove();
+    if (scene.before) {
+      hideCallout();
+      cursor.classList.remove("is-visible");
+      await scene.before(stepSignal);
+    }
 
     const target = scene.target ? await resolveTarget(scene.target, stepSignal, scene.waitForTarget ? 2000 : 0) : null;
     if (scene.target && !target) return;
-    setProgress(bar, index, SCENES.length);
     updateBack(index);
+    showStep(index);
 
     // 1. Glide the spotlight and cursor to the target while the old callout fades out.
     hideCallout();
@@ -926,6 +1003,8 @@ async function runDemo(interactive: boolean) {
     hideCallout();
     document.getElementById(IDS.ghost)?.remove();
     restoreWidget();
+    // The site-proof step closes the chat; every other card needs it open.
+    if (!isChatOpen()) await openChat();
     await settle(findChatWindow, signal);
     if (pressed && isLanding(from)) return from;
     for (let j = from - 1; j >= 0; j--) if (isLanding(j)) return j;
@@ -948,10 +1027,8 @@ async function runDemo(interactive: boolean) {
     }
 
     // Finale: point at the message box and hand over to the visitor.
-    // The progress bar and Skip are no longer needed; the card has its own way out.
     newStep();
     scenesDone = true;
-    bar.classList.remove("is-visible");
     hideCallout();
     document.getElementById(IDS.ghost)?.remove();
     cursor.classList.remove("is-visible");
@@ -965,6 +1042,7 @@ async function runDemo(interactive: boolean) {
     await glide();
     atFinale = true;
     callout.classList.add("is-finished");
+    callout.style.setProperty("--ac-progress", "100%");
     showCallout(FINALE);
     await pausableSleep(END_HOLD_MS);
     handOver = true;
@@ -972,6 +1050,7 @@ async function runDemo(interactive: boolean) {
     if (!(err instanceof DOMException && err.name === "AbortError")) console.error("[agent-demo]", err);
   } finally {
     window.removeEventListener("resize", relayout);
+    window.removeEventListener("scroll", relayout);
     for (const type of POINTER_EVENTS) window.removeEventListener(type, onPointerEvent, true);
     for (const type of KEY_EVENTS) window.removeEventListener(type, onKey as EventListener, true);
     document.removeEventListener("visibilitychange", syncPause);

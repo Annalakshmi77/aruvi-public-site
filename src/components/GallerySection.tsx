@@ -320,7 +320,7 @@ const ProductCard: React.FC<{
             }}
             className="w-full py-3 px-4 rounded-xl bg-[#0d382c] hover:bg-[#0d4d3d] text-white font-mono font-bold text-xs transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-98"
           >
-            <span>Explore All {item.variants.length} Variants &amp; Dimensions</span>
+            <span>Explore All</span>
             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
           </button>
         </div>
@@ -907,12 +907,27 @@ const ProductDetailModal: React.FC<{
   );
 };
 
+// Colour range is encoded in the product name ("... - Standard Colors" / "... - Special Colors")
+type ColourRange = "All" | "Standard" | "Special";
+const colourRanges: { value: ColourRange; label: string }[] = [
+  { value: "All", label: "All" },
+  { value: "Standard", label: "Standard" },
+  { value: "Special", label: "Special" },
+];
+
+const getColourRange = (title: string): ColourRange | null => {
+  if (/special\s*colou?rs?/i.test(title)) return "Special";
+  if (/standard\s*colou?rs?/i.test(title)) return "Standard";
+  return null;
+};
+
 /**
  * Main Gallery Section for Peacock Tapes
  */
 export const GallerySection: React.FC = () => {
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [activeFilter, setActiveFilter] = useState<string>("All");
+  const [activeColourRange, setActiveColourRange] = useState<ColourRange>("All");
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLive, setIsLive] = useState<boolean>(false);
@@ -1032,10 +1047,16 @@ export const GallerySection: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const filteredData =
-    activeFilter === "All"
-      ? items
-      : items.filter((item) => item.category.toLowerCase() === activeFilter.toLowerCase());
+  const handleColourRangeChange = (range: ColourRange) => {
+    setActiveColourRange(range);
+    setCurrentPage(1);
+  };
+
+  const filteredData = items.filter(
+    (item) =>
+      (activeFilter === "All" || item.category.toLowerCase() === activeFilter.toLowerCase()) &&
+      (activeColourRange === "All" || getColourRange(item.title) === activeColourRange)
+  );
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -1094,18 +1115,45 @@ export const GallerySection: React.FC = () => {
         </p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 mb-10">
-        {categories.map((filter) => (
-          <Button
-            key={filter}
-            variant={activeFilter === filter ? "filterActive" : "filter"}
-            onClick={() => handleFilterChange(filter)}
-            className="cursor-pointer transition-all"
-          >
-            {filter}
-          </Button>
-        ))}
+      {/* Filter Tabs + Colour Range Toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
+        <div className="flex flex-wrap items-center gap-2">
+          {categories.map((filter) => (
+            <Button
+              key={filter}
+              variant={activeFilter === filter ? "filterActive" : "filter"}
+              onClick={() => handleFilterChange(filter)}
+              className="cursor-pointer transition-all"
+            >
+              {filter}
+            </Button>
+          ))}
+        </div>
+
+        <div
+          role="group"
+          aria-label="Colour range"
+          className="inline-flex self-start sm:self-auto items-center p-1 rounded-full border border-[#0d382c]/15 bg-white/60"
+        >
+          {colourRanges.map((range) => {
+            const isActive = activeColourRange === range.value;
+            return (
+              <button
+                key={range.value}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => handleColourRangeChange(range.value)}
+                className={`min-h-7 px-3.5 rounded-full text-xs transition-all cursor-pointer ${
+                  isActive
+                    ? "bg-[#0d4d3d] text-[#f5f0e6] font-medium shadow-sm"
+                    : "text-[#0d382c]/70 hover:text-[#0d4d3d]"
+                }`}
+              >
+                {range.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Loading & Content States */}
@@ -1118,7 +1166,7 @@ export const GallerySection: React.FC = () => {
         <div className="text-center py-16 bg-[#faf6f0] rounded-2xl border border-[#0d382c]/10 p-8 max-w-lg mx-auto">
           <p className="text-lg font-bold text-[#0d382c]">No products found</p>
           <p className="text-sm text-[#0d382c]/70 mt-1">
-            {error ? error : "No products available in this category in the database."}
+            {error ? error : "No products match the selected category and colour range."}
           </p>
         </div>
       ) : (

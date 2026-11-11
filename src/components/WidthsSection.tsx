@@ -35,7 +35,7 @@ export const WidthsSection: React.FC = () => {
         </div>
 
         {/* Widths Chart Bars */}
-        <div className="space-y-4 max-w-5xl">
+        <div className="space-y-4 max-w-5xl" data-tour="widths-list">
           {widthsData.map((item) => (
             <div
               key={item.inch}

@@ -180,7 +180,7 @@ export const PricingSection: React.FC = () => {
       </div>
 
       {/* 4 Cards Grid for Custom Orders */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-tour="custom-jobs">
         {customJobCards.map((card) => (
           <div
             key={card.title}
